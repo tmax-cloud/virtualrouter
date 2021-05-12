@@ -1,5 +1,32 @@
 package natrulemanager
 
+import (
+	"github.com/cho4036/virtualrouter/component/rulemanager"
+	"github.com/cho4036/virtualrouter/component/rulemanager/parser.go"
+	"github.com/cho4036/virtualrouter/component/rulemanager/rule/rulelister"
+)
+
+type NatRuleManager struct {
+	rulemanager.Rulemanager
+}
+
+// func (n *NatRuleManager) Start(stopCh <-chan struct{}) {
+
+// }
+
+func (n *NatRuleManager) Lister() rulelister.RuleLister {
+	return n.List
+}
+
+func New() rulemanager.Interface {
+	return &NatRuleManager{
+		Rulemanager: rulemanager.Rulemanager{
+			List:  rulelister.New(),
+			Parse: parser.New(),
+		},
+	}
+}
+
 // import (
 // 	"reflect"
 
