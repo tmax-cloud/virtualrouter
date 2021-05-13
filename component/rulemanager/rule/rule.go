@@ -1,38 +1,24 @@
 package rule
 
 type Rule interface {
-	Add()
-	GetRule() Rule
+	GetMetadata() RuleMeta
+	GetItems() interface{}
 }
 
-type rule struct {
-}
+// type rule struct {
+// 	Metadata RuleMata
+// 	Item     interface{}
+// }
 
-type RuleLister interface {
-	Add(Rule)
-	List() (ret []Rule, err error)
-	Get(name string) (Rule, error)
-}
+// func New() Rule {
+// 	return &rule{}
+// }
 
-type ruleLister struct {
-	indexer Indexer
-}
+// func (r rule) GetMetadata() RuleMata {
 
-func (r *ruleLister) newRuleLister() {
-}
+// 	return r.Metadata
+// }
 
-type Indexer interface {
-	Store
-
-	// Index(indexName string, rule Rule) ([]Rule, error)
-
-	// GetIndexer() Indexer
-}
-
-type Store interface {
-	Add(Rule) error
-	Update(Rule) error
-	Delete(Rule) error
-	List() []Rule
-	Get()
+type RuleMeta struct {
+	Name string
 }
