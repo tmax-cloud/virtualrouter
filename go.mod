@@ -16,7 +16,7 @@ require (
 	k8s.io/api v0.21.0
 	k8s.io/apimachinery v0.21.0
 	k8s.io/client-go v0.21.0
-	k8s.io/code-generator v0.21.0
+	k8s.io/code-generator v0.19.0
 	k8s.io/klog/v2 v2.8.0
 	k8s.io/kubernetes v1.13.0
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920
@@ -33,7 +33,7 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.0.0-20210329193902-8b9f5901612d
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.19.0
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.19.0
-	k8s.io/code-generator => k8s.io/code-generator v0.0.0-20210329191534-f7420a43c25d
+	k8s.io/code-generator => k8s.io/code-generator v0.19.10
 	k8s.io/component-base => k8s.io/component-base v0.19.0
 	k8s.io/cri-api => k8s.io/cri-api v0.19.0
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.19.0
