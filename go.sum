@@ -1073,8 +1073,8 @@ k8s.io/client-go v0.0.0-20210329193902-8b9f5901612d h1:s/D96DPUvCC2PUuro8yJPNUbB
 k8s.io/client-go v0.0.0-20210329193902-8b9f5901612d/go.mod h1:SyQ/3qvcTfPs2n6ER4D8yndVgiridrMbKkDXBbo6w1U=
 k8s.io/cloud-provider v0.19.0/go.mod h1:TYh7b7kQ6wiqF7Ftb+u3lN4IwvgOPbBrcvC3TDAW4cw=
 k8s.io/cluster-bootstrap v0.19.0/go.mod h1:kBn1DKyqoM245wzz+AAnGkuysJ+9GqVbPYveTo4KiaA=
-k8s.io/code-generator v0.19.10 h1:ZgZjMytfuOEtMyhsRuA9M5EgfNpf7B0rUX5UIPtJW0o=
-k8s.io/code-generator v0.19.10/go.mod h1:ADrDvaUQWGn4a8lX0ONtzb7uFmDRQOMSYIMk1qWIAx8=
+k8s.io/code-generator v0.19.0 h1:r0BxYnttP/r8uyKd4+Njg0B57kKi8wLvwEzaaVy3iZ8=
+k8s.io/code-generator v0.19.0/go.mod h1:moqLn7w0t9cMs4+5CQyxnfA/HV8MF6aAVENF+WZZhgk=
 k8s.io/component-base v0.19.0/go.mod h1:dKsY8BxkA+9dZIAh2aWJLL/UdASFDNtGYTCItL4LM7Y=
 k8s.io/cri-api v0.19.0/go.mod h1:UN/iU9Ua0iYdDREBXNE9vqCJ7MIh/FW3VIL0d8pw7Fw=
 k8s.io/csi-translation-lib v0.19.0/go.mod h1:zGS1YqV8U2So/t4Hz8SoRXMx5y5/KSKnA6BXXxGuo4A=

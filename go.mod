@@ -8,15 +8,14 @@ require (
 	github.com/containerd/containerd v1.5.0 // indirect
 	github.com/docker/docker v20.10.6+incompatible
 	github.com/gorilla/mux v1.8.0 // indirect
-	github.com/mailru/easyjson v0.7.0
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f
 	golang.org/x/sys v0.0.0-20210324051608-47abb6519492
-	k8s.io/api v0.21.0
-	k8s.io/apimachinery v0.21.0
-	k8s.io/client-go v0.21.0
+	k8s.io/api v0.20.6
+	k8s.io/apimachinery v0.20.6
+	k8s.io/client-go v0.20.6
 	k8s.io/code-generator v0.19.0
 	k8s.io/klog/v2 v2.8.0
 	k8s.io/kubernetes v1.13.0
@@ -34,7 +33,7 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.0.0-20210329193902-8b9f5901612d
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.19.0
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.19.0
-	k8s.io/code-generator => k8s.io/code-generator v0.19.10
+	k8s.io/code-generator => k8s.io/code-generator v0.19.0
 	k8s.io/component-base => k8s.io/component-base v0.19.0
 	k8s.io/cri-api => k8s.io/cri-api v0.19.0
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.19.0
