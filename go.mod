@@ -8,6 +8,7 @@ require (
 	github.com/containerd/containerd v1.5.0 // indirect
 	github.com/docker/docker v20.10.6+incompatible
 	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/mailru/easyjson v0.7.0
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852

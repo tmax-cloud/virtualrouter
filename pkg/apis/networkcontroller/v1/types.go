@@ -34,6 +34,21 @@ type NATRule struct {
 
 // NATRuleSpec is the spec for a NATRule resource
 type NATRuleSpec struct {
+	Rules []Rules
+}
+
+type Rules struct {
+	Match  Match  `json:"match"`
+	Action Action `json:"action"`
+}
+
+type Match struct {
+	SrcIP   string `json:"srcIP"`
+	DstIP   string `json:"dstIP"`
+	Protocl string `json:"protocol"`
+}
+
+type Action struct {
 	SrcIP string `json:"srcIP"`
 	DstIP string `json:"dstIP"`
 }
