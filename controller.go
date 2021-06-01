@@ -23,7 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	appsinformers "k8s.io/client-go/informers/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -32,6 +31,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
+	"github.com/cho4036/virtualrouter/executor/iptables"
 	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
 	samplescheme "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned/scheme"
 	informers "github.com/cho4036/virtualrouter/pkg/client/informers/externalversions/networkcontroller/v1"
@@ -63,6 +63,7 @@ const (
 
 type natRuleKey string
 type natRuleChangeKey string
+type natRuleDeleteKey string
 
 type SyncState int
 
@@ -87,13 +88,14 @@ type Controller struct {
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
+
+	iptablesV4 iptables.Interface
 }
 
 // NewController returns a new sample controller
 func NewController(
 	kubeclientset kubernetes.Interface,
 	sampleclientset clientset.Interface,
-	deploymentInformer appsinformers.DeploymentInformer,
 	natRuleInformer informers.NATRuleInformer) *Controller {
 
 	// Create event broadcaster
@@ -135,7 +137,7 @@ func NewController(
 			if err != nil {
 				utilruntime.HandleError(err)
 			} else {
-				controller.workqueue.Add(natRuleKey(key))
+				controller.workqueue.Add(natRuleChangeKey(key))
 			}
 		},
 
@@ -144,10 +146,12 @@ func NewController(
 			if err != nil {
 				utilruntime.HandleError(err)
 			} else {
-				controller.workqueue.Add(natRuleKey(key))
+				controller.workqueue.Add(natRuleDeleteKey(key))
 			}
 		},
 	})
+
+	controller.iptablesV4 = iptables.NewIPV4()
 	return controller
 }
 
@@ -252,6 +256,10 @@ func (c *Controller) syncHandler(key interface{}) SyncState {
 		if err := c.updateNatRule(string(k)); err != nil {
 			return SyncStateError
 		}
+	case natRuleDeleteKey:
+		if err := c.deleteNatRule(string(k)); err != nil {
+			return SyncStateError
+		}
 	}
 
 	// Convert the namespace/name string into a distinct namespace and name
@@ -297,3 +305,50 @@ func (c *Controller) updateNatRule(key string) error {
 	_ = oldRule
 	return nil
 }
+
+func (c *Controller) deleteNatRule(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	natRule, err := c.natRulesLister.NATRules(namespace).Get(name)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	oldRule, fail := c.natWorkqueue.Get()
+	if fail {
+		return fmt.Errorf("failed to get oldNATRule")
+	}
+	// rule add iptables
+	_ = natRule
+	_ = oldRule
+	return nil
+}
+
+// func (c *Controller) execIPtables(op string, rule *v1.NATRule) {
+// 	switch op {
+// 	case "ADD":
+// 		var tableName string = "nat"
+// 		buffer := new(bytes.Buffer)
+// 		if err := c.iptablesV4.SaveInto(iptables.TableName(tableName), buffer); err != nil {
+// 			fmt.Errorf(err)
+// 		}
+
+// 		buffer.WriteString(
+
+// 		)
+
+// 		var chainName string
+// 		for _, val := range rule.Spec.Rules{
+// 			if val.Action.DstIP != "" {
+// 				chainName = "PREROUTING"
+// 			} else {
+// 				chainName = "POSTROUTING"
+// 			}
+// 		}
+// 		if rule.Spec.Rules
+
+// 	}
+// }
