@@ -28,6 +28,8 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
+	"github.com/cho4036/virtualrouter/executor/iptables"
+	"github.com/cho4036/virtualrouter/natrulecontroller"
 	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
 	informers "github.com/cho4036/virtualrouter/pkg/client/informers/externalversions"
 	"github.com/cho4036/virtualrouter/pkg/signals"
@@ -64,8 +66,8 @@ func main() {
 	nfvInformerFactory := informers.NewSharedInformerFactory(nfvClient, time.Second*30)
 
 	controller := NewController(kubeClient, nfvClient,
-		kubeInformerFactory.Apps().V1().Deployments(),
-		nfvInformerFactory.Tmax().V1().NATRules())
+		nfvInformerFactory.Tmax().V1().NATRules(),
+		natrulecontroller.New(iptables.NewIPV4(), 10*time.Second))
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.

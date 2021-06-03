@@ -107,6 +107,8 @@ type Interface interface {
 	// mapped to the same IP:PORT and consequently some suffer packet
 	// drops.
 	HasRandomFully() bool
+
+	GetChainLines(table TableName, bytes []byte) map[ChainName][]byte
 }
 
 type internalRunner struct {
@@ -188,4 +190,14 @@ func (r *internalRunner) Monitor(canary ChainName, tables []TableName, reloadFun
 
 func (r *internalRunner) HasRandomFully() bool {
 	return r.runner.HasRandomFully()
+}
+
+func (r *internalRunner) GetChainLines(table TableName, bytes []byte) map[ChainName][]byte {
+	chainMap := make(map[ChainName][]byte)
+
+	k8sMap := k8sIptables.GetChainLines(k8sIptables.Table(table), bytes)
+	for key, val := range k8sMap {
+		chainMap[ChainName(key)] = val
+	}
+	return chainMap
 }

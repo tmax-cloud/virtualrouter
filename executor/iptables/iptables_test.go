@@ -24,19 +24,21 @@ func TestIPTablesAddRuleWithoutFlush(t *testing.T) {
 		t.Log(err)
 	}
 	if exist {
-		i.SaveInto("nat", buffer)
+		// i.SaveInto("nat", buffer)
 	}
 	i.SaveInto("nat", buffer)
 
-	if testSNATRule.Spec.Rules[0].Action.DstIP != "" {
-		_, _ = i.EnsureChain("nat", "testprerouting")
-		var match string
-		if testSNATRule.Spec.Rules[0].Match.DstIP != "" {
-			match = ""
-		}
-		writeLine(buffer, "-A", "testprerouting", "-")
-	}
+	// if testSNATRule.Spec.Rules[0].Action.DstIP != "" {
+	// 	_, _ = i.EnsureChain("nat", "testprerouting")
+	// 	var match string
+	// 	if testSNATRule.Spec.Rules[0].Match.DstIP != "" {
+	// 		match = ""
+	// 	}
+	// 	writeLine(buffer, "-A", "testprerouting", "-")
+	// }
 
+	// t.Log(buffer.String())
+	iptables.NF_NAT_ADD(testSNATRule.Spec.Rules[0].Match, testSNATRule.Spec.Rules[0].Action, "test", buffer)
 	t.Log(buffer.String())
 }
 
@@ -61,9 +63,9 @@ var testSNATRule *v1.NATRule = &v1.NATRule{
 		Rules: []v1.Rules{
 			v1.Rules{
 				Match: v1.Match{
-					SrcIP:   "5.5.5.5",
-					DstIP:   "4.4.4.4",
-					Protocl: "tcp",
+					SrcIP:    "5.5.5.5",
+					DstIP:    "4.4.4.4",
+					Protocol: "tcp",
 				},
 				Action: v1.Action{
 					SrcIP: "3.3.3.3",
@@ -78,9 +80,9 @@ var testDNATRule *v1.NATRule = &v1.NATRule{
 		Rules: []v1.Rules{
 			v1.Rules{
 				Match: v1.Match{
-					SrcIP:   "5.5.5.5",
-					DstIP:   "4.4.4.4",
-					Protocl: "tcp",
+					SrcIP:    "5.5.5.5",
+					DstIP:    "4.4.4.4",
+					Protocol: "tcp",
 				},
 				Action: v1.Action{
 					DstIP: "3.3.3.3",

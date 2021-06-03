@@ -31,7 +31,8 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	"github.com/cho4036/virtualrouter/executor/iptables"
+	"github.com/cho4036/virtualrouter/natrulecontroller"
+	v1 "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller/v1"
 	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
 	samplescheme "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned/scheme"
 	informers "github.com/cho4036/virtualrouter/pkg/client/informers/externalversions/networkcontroller/v1"
@@ -83,20 +84,21 @@ type Controller struct {
 	// means we can ensure we only process a fixed amount of resources at a
 	// time, and makes it easy to ensure we are never processing the same item
 	// simultaneously in two different workers.
-	workqueue    workqueue.RateLimitingInterface
-	natWorkqueue workqueue.Interface
+	workqueue workqueue.RateLimitingInterface
+
 	// recorder is an event recorder for recording Event resources to the
 	// Kubernetes API.
 	recorder record.EventRecorder
 
-	iptablesV4 iptables.Interface
+	natruleController *natrulecontroller.NatRuleController
 }
 
 // NewController returns a new sample controller
 func NewController(
 	kubeclientset kubernetes.Interface,
 	sampleclientset clientset.Interface,
-	natRuleInformer informers.NATRuleInformer) *Controller {
+	natRuleInformer informers.NATRuleInformer,
+	natruleController *natrulecontroller.NatRuleController) *Controller {
 
 	// Create event broadcaster
 	// Add virtual-router types to the default Kubernetes Scheme so Events can be
@@ -114,7 +116,6 @@ func NewController(
 		natRulesLister:  natRuleInformer.Lister(),
 		syncFuncs:       make([]cache.InformerSynced, 0),
 		workqueue:       workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		natWorkqueue:    workqueue.New(),
 		recorder:        recorder,
 	}
 	controller.syncFuncs = append(controller.syncFuncs, natRuleInformer.Informer().HasSynced)
@@ -132,7 +133,6 @@ func NewController(
 		},
 
 		UpdateFunc: func(old, new interface{}) {
-			controller.natWorkqueue.Add(old)
 			key, err := cache.MetaNamespaceKeyFunc(new)
 			if err != nil {
 				utilruntime.HandleError(err)
@@ -151,7 +151,7 @@ func NewController(
 		},
 	})
 
-	controller.iptablesV4 = iptables.NewIPV4()
+	controller.natruleController = natruleController
 	return controller
 }
 
@@ -212,14 +212,14 @@ func (c *Controller) processNextWorkItem() bool {
 		// period.
 		defer c.workqueue.Done(obj)
 
-		var key string
-		var ok bool
-		if key, ok = obj.(string); !ok {
+		// var key string
+		// var ok bool
+		// if key, ok = obj.(string); !ok {
 
-			c.workqueue.Forget(obj)
-			utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
-			return nil
-		}
+		// 	c.workqueue.Forget(obj)
+		// 	utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %#v", obj))
+		// 	return nil
+		// }
 
 		status := c.syncHandler(obj)
 		switch status {
@@ -227,7 +227,6 @@ func (c *Controller) processNextWorkItem() bool {
 			c.workqueue.Forget(obj)
 		case SyncStateError:
 			c.workqueue.AddRateLimited(obj)
-			return fmt.Errorf("error syncing '%s', requeuing", key)
 		case SyncStateReprocess:
 			c.workqueue.AddRateLimited(obj)
 		}
@@ -246,7 +245,7 @@ func (c *Controller) processNextWorkItem() bool {
 // converge the two. It then updates the Status block of the Foo resource
 // with the current status of the resource.
 func (c *Controller) syncHandler(key interface{}) SyncState {
-
+	klog.Info("syncHanlder called")
 	switch k := key.(type) {
 	case natRuleKey:
 		if err := c.addNatRule(string(k)); err != nil {
@@ -281,7 +280,7 @@ func (c *Controller) addNatRule(key string) error {
 		return nil
 	}
 	// rule add iptables
-	_ = natRule
+	c.natruleController.OnAdd(natRule)
 	return nil
 }
 
@@ -296,13 +295,9 @@ func (c *Controller) updateNatRule(key string) error {
 		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 		return nil
 	}
-	oldRule, fail := c.natWorkqueue.Get()
-	if fail {
-		return fmt.Errorf("failed to get oldNATRule")
-	}
+
 	// rule add iptables
-	_ = natRule
-	_ = oldRule
+	c.natruleController.OnUpdate(natRule)
 	return nil
 }
 
@@ -312,18 +307,12 @@ func (c *Controller) deleteNatRule(key string) error {
 		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 		return nil
 	}
-	natRule, err := c.natRulesLister.NATRules(namespace).Get(name)
-	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
-		return nil
-	}
-	oldRule, fail := c.natWorkqueue.Get()
-	if fail {
-		return fmt.Errorf("failed to get oldNATRule")
-	}
+	emptyObj := &v1.NATRule{}
+	emptyObj.SetName(name)
+	emptyObj.SetNamespace(namespace)
+
 	// rule add iptables
-	_ = natRule
-	_ = oldRule
+	c.natruleController.OnDelete(emptyObj)
 	return nil
 }
 
