@@ -1,4 +1,4 @@
-FROM frolvlad/alpine-glibc:alpine-3.7_glibc-2.26
+FROM frolvlad/alpine-glibc:alpine-3.13_glibc-2.32
 
 RUN apk update && apk add iptables
 

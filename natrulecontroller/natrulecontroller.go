@@ -114,13 +114,13 @@ func (n *NatRuleController) OnDelete(natrule *v1.NATRule) error {
 	lines = lines[1 : len(lines)-3] // remove tails with COMMIT
 
 	key := getNamespaceName(natrule)
-	_, ok := n.natruleMap[key]
+	val, ok := n.natruleMap[key]
 	if !ok {
 		// n.natruleSynced = false
 		klog.Warningf("Deleting empty value on key(%s) detected During OnDelete Event", key)
 	}
 
-	n.removeRule(natrule, &lines)
+	n.removeRule(&val, &lines)
 	lines = append(lines, "COMMIT")
 	n.iptablesdata.Reset()
 	writeLine(n.iptablesdata, lines...)
