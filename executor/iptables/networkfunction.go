@@ -8,12 +8,14 @@ import (
 
 func NF_NAT_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer) {
 	if a.DstIP != "" {
-		buffer.WriteString("-A" + " " + chain)
+		// buffer.WriteString("-A" + " " + chain)
+		buffer.WriteString("-A" + " " + "PREROUTING")
 		match2string(m, buffer)
 		dnatAction2string(a, buffer)
 	}
 	if a.SrcIP != "" {
-		buffer.WriteString("-A" + " " + chain)
+		// buffer.WriteString("-A" + " " + chain)
+		buffer.WriteString("-A" + " " + "POSTROUTING")
 		match2string(m, buffer)
 		snatAction2string(a, buffer)
 	}
@@ -22,12 +24,14 @@ func NF_NAT_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer) {
 
 func NF_NAT_DEL(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer) {
 	if a.DstIP != "" {
-		buffer.WriteString("-D" + " " + chain)
+		// buffer.WriteString("-D" + " " + chain)
+		buffer.WriteString("-D" + " " + "PREROUTING")
 		match2string(m, buffer)
 		dnatAction2string(a, buffer)
 	}
 	if a.SrcIP != "" {
-		buffer.WriteString("-D" + " " + chain)
+		// buffer.WriteString("-D" + " " + chain)
+		buffer.WriteString("-D" + " " + "POSTROUTING")
 		match2string(m, buffer)
 		snatAction2string(a, buffer)
 	}
@@ -47,15 +51,15 @@ func match2string(m v1.Match, buffer *bytes.Buffer) {
 }
 
 func dnatAction2string(a v1.Action, buffer *bytes.Buffer) {
-	if a.DstIP == "0.0.0.0" || a.DstIP == "0.0.0.0/0" {
-		writeLine(buffer, " -j", "MASQUERADE", "--random-fully")
-		return
-	}
 	writeLine(buffer, " -j", "DNAT", "--to-destination", a.DstIP)
 }
 
 func snatAction2string(a v1.Action, buffer *bytes.Buffer) {
-	writeLine(buffer, " -j", "SNAT", "--to-destination", a.SrcIP)
+	if a.SrcIP == "0.0.0.0" || a.SrcIP == "0.0.0.0/0" {
+		writeLine(buffer, " -j", "MASQUERADE", "--random-fully")
+		return
+	}
+	writeLine(buffer, " -j", "SNAT", "--to-source", a.SrcIP)
 }
 
 func writeLine(buf *bytes.Buffer, words ...string) {

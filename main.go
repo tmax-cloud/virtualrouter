@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"os/exec"
 	"time"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -64,6 +65,12 @@ func main() {
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	nfvInformerFactory := informers.NewSharedInformerFactory(nfvClient, time.Second*30)
+
+	cmd := exec.Command("sysctl", "-p")
+	if err := cmd.Run(); err != nil {
+		klog.ErrorS(err, "Apply sysctl failed", "command", "sysctl -p")
+		return
+	}
 
 	controller := NewController(kubeClient, nfvClient,
 		nfvInformerFactory.Tmax().V1().NATRules(),

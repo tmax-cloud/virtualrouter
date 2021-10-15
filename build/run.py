@@ -7,7 +7,8 @@ def subprocess_open(command):
     return stdoutdata, stderrdata
 
 def go_build(package, output):
-    out, err = subprocess_open(['go', 'build', '-a', '-o', output, package])
+    # out, err = subprocess_open(['go', 'build', '-a', '-o', output, package])
+    out, err = subprocess_open(['go', 'build', '-o', output, package])
     if out != "" or err != "":
         return out, err
     return "", ""
@@ -39,6 +40,16 @@ def main():
         return
     print("Go build done")
 
+    # checkout = docker_image_check(DOCKER_IMAGE_NAME,DOCKER_IMAGE_TAG,DOCKER_REGISTRY)
+    # # print("checkout Type: " + type(checkout))
+    # if checkout == "" :
+    #     print("There is no image")
+    # else :
+    #     print("deleting "+ checkout)
+    #     out, err = subprocess_open(['docker', 'rmi', checkout])
+    # checkout = "$(docker images " + DOCKER_REGISTRY + DOCKER_IMAGE_NAME + ":" + DOCKER_IMAGE_TAG + " -q)"
+    # out, err = subprocess_open(['docker', 'rmi', checkout])
+
     out, err = docker_build(name=DOCKER_IMAGE_NAME,tag=DOCKER_IMAGE_TAG, registry=DOCKER_REGISTRY)
     if err != "":
         print("Error: " + err)
@@ -57,6 +68,13 @@ def main():
     # currentPath = os.getcwd()
     # print(currentPath)
 
+def docker_image_check(name, tag, registry):
+    image = registry + name + ":" + tag
+    out, err = subprocess_open(['docker', 'images', '-f', 'reference=' + image, '-q'])
+    if err != "":
+        print("image_check_err")
+        return 
+    return out
 
 
 if __name__ == "__main__":

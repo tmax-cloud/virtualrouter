@@ -7,8 +7,8 @@ spec:
   rules:
   - match:
       srcIP: 10.10.10.0/24
-      protocol: tcp
+      protocol: icmp
     action:
-      dstIP: 0.0.0.0
+      srcIP: 0.0.0.0
     
     
