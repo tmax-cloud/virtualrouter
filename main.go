@@ -45,6 +45,11 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
+	var fwmark uint32
+	fwmark = 200
+	intif := "ethint"
+	extif := "ethext"
+
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
@@ -74,7 +79,7 @@ func main() {
 
 	controller := NewController(kubeClient, nfvClient,
 		nfvInformerFactory.Tmax().V1().NATRules(),
-		natrulecontroller.New(iptables.NewIPV4(), 10*time.Second))
+		natrulecontroller.New(intif, extif, fwmark, iptables.NewIPV4(), 10*time.Second))
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.

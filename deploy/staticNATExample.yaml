@@ -1,0 +1,19 @@
+apiVersion: virtualrouter.tmax.hypercloud.com/v1
+kind: NATRule
+metadata:
+  name: teststaticnat
+  namespace: virtualrouter
+spec:
+  rules:
+  - match:
+      srcIP: 10.10.10.4/32
+      protocol: all
+    action:
+      srcIP: 192.168.9.134
+  - match:
+      dstIP: 192.168.9.134/32
+      protocol: all
+    action:
+      dstIP: 10.10.10.4
+    
+    

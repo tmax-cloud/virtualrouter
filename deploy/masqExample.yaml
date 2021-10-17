@@ -1,15 +1,14 @@
 apiVersion: virtualrouter.tmax.hypercloud.com/v1
 kind: NATRule
 metadata:
-  name: test2
+  name: testmasquerade
   namespace: virtualrouter
 spec:
   rules:
   - match:
-      srcIP: 2.2.2.2/32
-      dstIP: 3.3.3.3/32
-      protocol: tcp
+      srcIP: 10.10.10.0/24
+      protocol: all
     action:
-      dstIP: 0.0.0.0
+      srcIP: 0.0.0.0
     
     

@@ -9,13 +9,13 @@ import (
 func NF_NAT_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer) {
 	if a.DstIP != "" {
 		// buffer.WriteString("-A" + " " + chain)
-		buffer.WriteString("-A" + " " + "PREROUTING")
+		buffer.WriteString("-A" + " " + chain)
 		match2string(m, buffer)
 		dnatAction2string(a, buffer)
 	}
 	if a.SrcIP != "" {
 		// buffer.WriteString("-A" + " " + chain)
-		buffer.WriteString("-A" + " " + "POSTROUTING")
+		buffer.WriteString("-A" + " " + chain)
 		match2string(m, buffer)
 		snatAction2string(a, buffer)
 	}
@@ -25,13 +25,13 @@ func NF_NAT_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer) {
 func NF_NAT_DEL(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer) {
 	if a.DstIP != "" {
 		// buffer.WriteString("-D" + " " + chain)
-		buffer.WriteString("-D" + " " + "PREROUTING")
+		buffer.WriteString("-D" + " " + chain)
 		match2string(m, buffer)
 		dnatAction2string(a, buffer)
 	}
 	if a.SrcIP != "" {
 		// buffer.WriteString("-D" + " " + chain)
-		buffer.WriteString("-D" + " " + "POSTROUTING")
+		buffer.WriteString("-D" + " " + chain)
 		match2string(m, buffer)
 		snatAction2string(a, buffer)
 	}
