@@ -2,7 +2,10 @@ package natrulecontroller
 
 import (
 	"bytes"
+	"fmt"
 	"net"
+	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,9 +24,16 @@ const (
 	manglePreroutingMarkLanChain iptables.ChainName = "prerouting_mark_lan"
 	manglePreroutingMarkWanChain iptables.ChainName = "prerouting_mark_wan"
 
-	natPreroutingStaticNATChain  iptables.ChainName = "prerouting_staticnat"
-	natPostroutingStaticNATChain iptables.ChainName = "postrouting_staticnat"
-	natPostroutingSNATChain      iptables.ChainName = "postrouting_snat"
+	natPreroutingLoadBalanceChain  iptables.ChainName = "prerouting_loadbalancing"
+	natPostroutingLoadBalanceChain iptables.ChainName = "postrouting_loadbalancing"
+	natPreroutingStaticNATChain    iptables.ChainName = "prerouting_staticnat"
+	natPostroutingStaticNATChain   iptables.ChainName = "postrouting_staticnat"
+	natPostroutingSNATChain        iptables.ChainName = "postrouting_snat"
+
+	filterCountLanChain       iptables.ChainName = "count_lan"
+	filterCountWanChain       iptables.ChainName = "count_wan"
+	filterForwardFromLanChain iptables.ChainName = "forward_lan_to_wan"
+	filterForwardFromWanChain iptables.ChainName = "forward_wan_to_lan"
 )
 
 type iptablesJumpChain struct {
@@ -44,6 +54,7 @@ var (
 		{iptables.TableNAT, natPostroutingStaticNATChain, iptables.ChainPostrouting, "to staticnat chain", nil},
 		{iptables.TableNAT, natPostroutingSNATChain, iptables.ChainPostrouting, "to snat chain", nil},
 	}
+	iptablesFilterJumpChains = []iptablesJumpChain{}
 )
 
 type NatRuleController struct {
@@ -100,7 +111,6 @@ func (n *NatRuleController) initialize() error {
 		{iptables.TableMangle, manglePreroutingMarkWanChain, iptables.ChainPrerouting, "mark new conn for wan", []string{"-i", n.extif, "-m", "conntrack", "--ctstate", "NEW"}},
 	}
 	iptablesMangleJumpChains = append(iptablesMangleJumpChains, initMangleJumpChains...)
-
 	for _, jump := range iptablesMangleJumpChains {
 		if _, err := n.iptables.EnsureChain(jump.table, jump.dstChain); err != nil {
 			klog.ErrorS(err, "Failed to ensure chain exists", "table", jump.table, "chain", jump.dstChain)
@@ -116,6 +126,11 @@ func (n *NatRuleController) initialize() error {
 		}
 	}
 
+	initNatJumpChains := []iptablesJumpChain{
+		{iptables.TableNAT, natPreroutingLoadBalanceChain, iptables.ChainPrerouting, "to load balancing chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, natPostroutingLoadBalanceChain, iptables.ChainPostrouting, "to load balancing chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+	}
+	iptablesNatJumpChains = append(iptablesNatJumpChains, initNatJumpChains...)
 	for _, jump := range iptablesNatJumpChains {
 		if _, err := n.iptables.EnsureChain(jump.table, jump.dstChain); err != nil {
 			klog.ErrorS(err, "Failed to ensure chain exists", "table", jump.table, "chain", jump.dstChain)
@@ -137,6 +152,37 @@ func (n *NatRuleController) initialize() error {
 			}
 		}
 	}
+
+	initFilterJumpChains := []iptablesJumpChain{
+		{iptables.TableFilter, filterCountLanChain, iptables.ChainForward, "count lan packets", []string{"-i", n.intif}},
+		{iptables.TableFilter, filterCountWanChain, iptables.ChainForward, "count wan packets", []string{"-i", n.extif}},
+		{iptables.TableFilter, filterForwardFromLanChain, iptables.ChainForward, "from lan to wan filter chain", []string{"-i", n.intif}},
+		{iptables.TableFilter, filterForwardFromWanChain, iptables.ChainForward, "from wan to lan filter chain", []string{"-i", n.extif}},
+	}
+	iptablesFilterJumpChains = append(iptablesFilterJumpChains, initFilterJumpChains...)
+
+	for _, jump := range initFilterJumpChains {
+		if _, err := n.iptables.EnsureChain(jump.table, jump.dstChain); err != nil {
+			klog.ErrorS(err, "Failed to ensure chain exists", "table", jump.table, "chain", jump.dstChain)
+			return err
+		}
+		args := append(jump.extraArgs,
+			"-m", "comment", "--comment", jump.comment,
+			"-j", string(jump.dstChain),
+		)
+		if _, err := n.iptables.EnsureRule(iptables.Prepend, jump.table, jump.srcChain, args...); err != nil {
+			klog.ErrorS(err, "Failed to ensure chain jumps", "table", jump.table, "srcChain", jump.srcChain, "dstChain", jump.dstChain)
+			return err
+		}
+	}
+
+	//ToDo: Convert using EnsureRule Function
+	cmd := exec.Command("iptables", "-t", "filter", "-P", "FORWARD", "DROP")
+	if err := cmd.Run(); err != nil {
+		klog.ErrorS(err, "Failed to apply iptables rule", "command", "iptables -t filter -P DROP")
+		return fmt.Errorf("failed to set policy of filter table to DROP")
+	}
+
 	if err := n.initMark(); err != nil {
 		klog.ErrorS(err, "Failed to initMark")
 		return err
@@ -165,7 +211,6 @@ func (n *NatRuleController) initMark() error {
 	initRules := []string{
 		"-A PREROUTING -i" + " " + n.intif + " " + "-m conntrack --ctstate RELATED,ESTABLISHED -j CONNMARK --restore-mark --nfmask 0xffffffff --ctmask 0xffffffff",
 		"-A PREROUTING -i" + " " + n.extif + " " + "-m conntrack --ctstate RELATED,ESTABLISHED -j CONNMARK --restore-mark --nfmask 0xffffffff --ctmask 0xffffffff",
-		"-A FORWARD -j count_forward",
 		"-A OUTPUT -m conntrack --ctstate RELATED,ESTABLISHED -j CONNMARK --restore-mark --nfmask 0xffffffff --ctmask 0xffffffff",
 		"-A count_forward -j RETURN",
 		"-A count_lan -j RETURN",
@@ -324,9 +369,9 @@ func (n *NatRuleController) OnUpdate(natrule *v1.NATRule) error {
 	lines = lines[1 : len(lines)-3] // remove tails with COMMIT
 
 	key := getNamespaceName(natrule)
-	for k, v := range n.natruleMap {
-		klog.Infof("key: %s, value: %+v", k, v)
-	}
+	// for k, v := range n.natruleMap {
+	// 	klog.Infof("key: %s, value: %+v", k, v)
+	// }
 
 	var chainName string
 	val, ok := n.natruleMap[key]

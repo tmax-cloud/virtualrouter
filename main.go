@@ -34,6 +34,7 @@ import (
 	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
 	informers "github.com/cho4036/virtualrouter/pkg/client/informers/externalversions"
 	"github.com/cho4036/virtualrouter/pkg/signals"
+	"github.com/vishvananda/netlink"
 )
 
 var (
@@ -45,10 +46,22 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
-	var fwmark uint32
-	fwmark = 200
+	// ToDo: Make it variable not constant
+	var fwmark uint32 = 200
+	// ToDo: Make it variable not constant
 	intif := "ethint"
+	// ToDo: Make it variable not constant
 	extif := "ethext"
+
+	// ToDo: Make it start after interface job done(CNI: intif, extif or signal)
+	for {
+		if _, err := netlink.LinkByName(extif); err == nil {
+			if _, err := netlink.LinkByName(intif); err == nil {
+				break
+			}
+		}
+		time.Sleep(time.Second * 1)
+	}
 
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()

@@ -32,9 +32,97 @@ type NATRule struct {
 	Status NATRuleStatus `json:"status"`
 }
 
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// FireWallRule is a specification for a FireWallRule resource
+type FireWallRule struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   FireWallRuleSpec   `json:"spec"`
+	Status FireWallRuleStatus `json:"status"`
+}
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// LoadBalanceRule is a specification for a LoadBalanceRule resource
+type LoadBalanceRule struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   LoadBalanceRuleSpec   `json:"spec"`
+	Status LoadBalanceRuleStatus `json:"status"`
+}
+
 // NATRuleSpec is the spec for a NATRule resource
 type NATRuleSpec struct {
 	Rules []Rules `json:"rules"`
+}
+
+// NATRuleStatus is the status for a NATRule resource
+type NATRuleStatus struct {
+	Deployed string `json:"deployed"`
+
+	OldSrcIP string
+	OldDstIP string
+}
+
+// FireWallRuleSpec is the spec for a FireWallRule resource
+type FireWallRuleSpec struct {
+	Rules []Rules `json:"rules"`
+}
+
+// FireWallRuleSpec is the status for a FireWallRule resource
+type FireWallRuleStatus struct {
+	Deployed string `json:"deployed"`
+
+	OldSrcIP string
+	OldDstIP string
+}
+
+// LoadBalanceRuleSpec is the spec for a LoadBalanceRule resource
+type LoadBalanceRuleSpec struct {
+	Rules []Rules `json:"rules"`
+}
+
+// LoadBalanceRuleSpec is the spec for a LoadBalanceRule resource
+type LoadBalanceRuleStatus struct {
+	Deployed string `json:"deployed"`
+
+	OldSrcIP string
+	OldDstIP string
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// NATRuleList is a list of NATRule resources
+type NATRuleList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []NATRule `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// FireWallRuleList is a list of FireWallRule resources
+type FireWallRuleList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []FireWallRule `json:"items"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// LoadBalanceRuleList is a list of LoadBalanceRule resources
+type LoadBalanceRuleList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata"`
+
+	Items []LoadBalanceRule `json:"items"`
 }
 
 type Rules struct {
@@ -51,22 +139,4 @@ type Match struct {
 type Action struct {
 	SrcIP string `json:"srcIP"`
 	DstIP string `json:"dstIP"`
-}
-
-// NATRuleStatus is the status for a NATRule resource
-type NATRuleStatus struct {
-	Deployed string `json:"deployed"`
-
-	OldSrcIP string
-	OldDstIP string
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// NATRuleList is a list of NATRule resources
-type NATRuleList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-
-	Items []NATRule `json:"items"`
 }
