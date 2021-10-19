@@ -28,6 +28,14 @@ type FakeTmaxV1 struct {
 	*testing.Fake
 }
 
+func (c *FakeTmaxV1) FireWallRules(namespace string) v1.FireWallRuleInterface {
+	return &FakeFireWallRules{c, namespace}
+}
+
+func (c *FakeTmaxV1) LoadBalancerRules(namespace string) v1.LoadBalancerRuleInterface {
+	return &FakeLoadBalancerRules{c, namespace}
+}
+
 func (c *FakeTmaxV1) NATRules(namespace string) v1.NATRuleInterface {
 	return &FakeNATRules{c, namespace}
 }

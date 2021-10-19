@@ -6,36 +6,73 @@ import (
 	v1 "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller/v1"
 )
 
-func NF_NAT_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer) {
+func NF_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer, args ...string) {
+	if a.Policy != "" {
+		buffer.WriteString("-A" + " " + chain)
+		if args != nil {
+			args2string(args, buffer)
+		}
+		match2string(m, buffer)
+		policyAction2string(a, buffer)
+		return
+	}
 	if a.DstIP != "" {
 		// buffer.WriteString("-A" + " " + chain)
 		buffer.WriteString("-A" + " " + chain)
+		if args != nil {
+			args2string(args, buffer)
+		}
 		match2string(m, buffer)
 		dnatAction2string(a, buffer)
 	}
 	if a.SrcIP != "" {
 		// buffer.WriteString("-A" + " " + chain)
 		buffer.WriteString("-A" + " " + chain)
+		if args != nil {
+			args2string(args, buffer)
+		}
 		match2string(m, buffer)
 		snatAction2string(a, buffer)
 	}
 	// writeLine(buffer, "COMMIT")
 }
 
-func NF_NAT_DEL(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer) {
+func NF_DEL(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer, args ...string) {
+	if a.Policy != "" {
+		buffer.WriteString("-D" + " " + chain)
+		if args != nil {
+			args2string(args, buffer)
+		}
+		match2string(m, buffer)
+		policyAction2string(a, buffer)
+		return
+	}
+
 	if a.DstIP != "" {
 		// buffer.WriteString("-D" + " " + chain)
 		buffer.WriteString("-D" + " " + chain)
+		if args != nil {
+			args2string(args, buffer)
+		}
 		match2string(m, buffer)
 		dnatAction2string(a, buffer)
 	}
 	if a.SrcIP != "" {
 		// buffer.WriteString("-D" + " " + chain)
 		buffer.WriteString("-D" + " " + chain)
+		if args != nil {
+			args2string(args, buffer)
+		}
 		match2string(m, buffer)
 		snatAction2string(a, buffer)
 	}
 	// writeLine(buffer, "COMMIT")
+}
+
+func args2string(args []string, buffer *bytes.Buffer) {
+	for i := range args {
+		buffer.WriteString(" " + args[i])
+	}
 }
 
 func match2string(m v1.Match, buffer *bytes.Buffer) {
@@ -48,6 +85,10 @@ func match2string(m v1.Match, buffer *bytes.Buffer) {
 	if m.Protocol != "" {
 		buffer.WriteString(" -p " + m.Protocol)
 	}
+}
+
+func policyAction2string(a v1.Action, buffer *bytes.Buffer) {
+	writeLine(buffer, " -j", a.Policy)
 }
 
 func dnatAction2string(a v1.Action, buffer *bytes.Buffer) {

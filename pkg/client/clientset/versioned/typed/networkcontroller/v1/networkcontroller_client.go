@@ -26,12 +26,22 @@ import (
 
 type TmaxV1Interface interface {
 	RESTClient() rest.Interface
+	FireWallRulesGetter
+	LoadBalancerRulesGetter
 	NATRulesGetter
 }
 
 // TmaxV1Client is used to interact with features provided by the tmax.hypercloud.com group.
 type TmaxV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *TmaxV1Client) FireWallRules(namespace string) FireWallRuleInterface {
+	return newFireWallRules(c, namespace)
+}
+
+func (c *TmaxV1Client) LoadBalancerRules(namespace string) LoadBalancerRuleInterface {
+	return newLoadBalancerRules(c, namespace)
 }
 
 func (c *TmaxV1Client) NATRules(namespace string) NATRuleInterface {

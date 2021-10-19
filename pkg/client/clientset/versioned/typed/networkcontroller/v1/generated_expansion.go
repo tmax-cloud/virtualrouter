@@ -18,4 +18,8 @@ limitations under the License.
 
 package v1
 
+type FireWallRuleExpansion interface{}
+
+type LoadBalancerRuleExpansion interface{}
+
 type NATRuleExpansion interface{}

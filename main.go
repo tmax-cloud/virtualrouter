@@ -30,7 +30,7 @@ import (
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
 	"github.com/cho4036/virtualrouter/executor/iptables"
-	"github.com/cho4036/virtualrouter/natrulecontroller"
+	"github.com/cho4036/virtualrouter/iptablescontroller"
 	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
 	informers "github.com/cho4036/virtualrouter/pkg/client/informers/externalversions"
 	"github.com/cho4036/virtualrouter/pkg/signals"
@@ -92,7 +92,9 @@ func main() {
 
 	controller := NewController(kubeClient, nfvClient,
 		nfvInformerFactory.Tmax().V1().NATRules(),
-		natrulecontroller.New(intif, extif, fwmark, iptables.NewIPV4(), 10*time.Second))
+		nfvInformerFactory.Tmax().V1().FireWallRules(),
+		nfvInformerFactory.Tmax().V1().LoadBalancerRules(),
+		iptablescontroller.New(intif, extif, fwmark, iptables.NewIPV4(), 10*time.Second))
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.

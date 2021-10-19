@@ -1,0 +1,15 @@
+apiVersion: virtualrouter.tmax.hypercloud.com/v1
+kind: LoadBalancerRule
+metadata:
+  name: testloadbalancer
+  namespace: virtualrouter
+spec:
+  rules:
+  - loadBalancerIP: 192.168.9.133
+    backendIPs:
+    - backendIP: 10.10.10.3
+      weight: 40
+    - backendIP: 10.10.10.4
+      weight: 100
+    
+    

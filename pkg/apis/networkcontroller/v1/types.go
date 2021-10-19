@@ -47,13 +47,13 @@ type FireWallRule struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// LoadBalanceRule is a specification for a LoadBalanceRule resource
-type LoadBalanceRule struct {
+// LoadBalancerRule is a specification for a LoadBalancerRule resource
+type LoadBalancerRule struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   LoadBalanceRuleSpec   `json:"spec"`
-	Status LoadBalanceRuleStatus `json:"status"`
+	Spec   LoadBalancerRuleSpec   `json:"spec"`
+	Status LoadBalancerRuleStatus `json:"status"`
 }
 
 // NATRuleSpec is the spec for a NATRule resource
@@ -77,22 +77,16 @@ type FireWallRuleSpec struct {
 // FireWallRuleSpec is the status for a FireWallRule resource
 type FireWallRuleStatus struct {
 	Deployed string `json:"deployed"`
-
-	OldSrcIP string
-	OldDstIP string
 }
 
-// LoadBalanceRuleSpec is the spec for a LoadBalanceRule resource
-type LoadBalanceRuleSpec struct {
-	Rules []Rules `json:"rules"`
+// LoadBalancerRuleSpec is the spec for a LoadBalancerRule resource
+type LoadBalancerRuleSpec struct {
+	Rules []LBRules `json:"rules"`
 }
 
-// LoadBalanceRuleSpec is the spec for a LoadBalanceRule resource
-type LoadBalanceRuleStatus struct {
+// LoadBalancerRuleSpec is the spec for a LoadBalancerRule resource
+type LoadBalancerRuleStatus struct {
 	Deployed string `json:"deployed"`
-
-	OldSrcIP string
-	OldDstIP string
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -117,17 +111,28 @@ type FireWallRuleList struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// LoadBalanceRuleList is a list of LoadBalanceRule resources
-type LoadBalanceRuleList struct {
+// LoadBalancerRuleList is a list of LoadBalancerRule resources
+type LoadBalancerRuleList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
 
-	Items []LoadBalanceRule `json:"items"`
+	Items []LoadBalancerRule `json:"items"`
 }
 
 type Rules struct {
 	Match  Match  `json:"match"`
 	Action Action `json:"action"`
+	Args   []string
+}
+
+type LBRules struct {
+	LoadBalancerIP string     `json:"loadBalancerIP"`
+	BackendIPs     []LBTarget `json:"backendIPs"`
+}
+
+type LBTarget struct {
+	BackendIP string `json:"backendIP"`
+	Weight    int    `json:"weight"`
 }
 
 type Match struct {
@@ -137,6 +142,7 @@ type Match struct {
 }
 
 type Action struct {
-	SrcIP string `json:"srcIP"`
-	DstIP string `json:"dstIP"`
+	SrcIP  string `json:"srcIP"`
+	DstIP  string `json:"dstIP"`
+	Policy string `json:"policy"`
 }

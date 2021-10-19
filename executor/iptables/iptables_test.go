@@ -38,7 +38,7 @@ func TestIPTablesAddRuleWithoutFlush(t *testing.T) {
 	// }
 
 	// t.Log(buffer.String())
-	iptables.NF_NAT_ADD(testSNATRule.Spec.Rules[0].Match, testSNATRule.Spec.Rules[0].Action, "test", buffer)
+	iptables.NF_ADD(testSNATRule.Spec.Rules[0].Match, testSNATRule.Spec.Rules[0].Action, "test", buffer)
 	t.Log(buffer.String())
 }
 

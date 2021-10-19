@@ -24,6 +24,10 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// FireWallRules returns a FireWallRuleInformer.
+	FireWallRules() FireWallRuleInformer
+	// LoadBalancerRules returns a LoadBalancerRuleInformer.
+	LoadBalancerRules() LoadBalancerRuleInformer
 	// NATRules returns a NATRuleInformer.
 	NATRules() NATRuleInformer
 }
@@ -37,6 +41,16 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// FireWallRules returns a FireWallRuleInformer.
+func (v *version) FireWallRules() FireWallRuleInformer {
+	return &fireWallRuleInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// LoadBalancerRules returns a LoadBalancerRuleInformer.
+func (v *version) LoadBalancerRules() LoadBalancerRuleInformer {
+	return &loadBalancerRuleInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // NATRules returns a NATRuleInformer.

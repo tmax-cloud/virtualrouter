@@ -18,6 +18,22 @@ limitations under the License.
 
 package v1
 
+// FireWallRuleListerExpansion allows custom methods to be added to
+// FireWallRuleLister.
+type FireWallRuleListerExpansion interface{}
+
+// FireWallRuleNamespaceListerExpansion allows custom methods to be added to
+// FireWallRuleNamespaceLister.
+type FireWallRuleNamespaceListerExpansion interface{}
+
+// LoadBalancerRuleListerExpansion allows custom methods to be added to
+// LoadBalancerRuleLister.
+type LoadBalancerRuleListerExpansion interface{}
+
+// LoadBalancerRuleNamespaceListerExpansion allows custom methods to be added to
+// LoadBalancerRuleNamespaceLister.
+type LoadBalancerRuleNamespaceListerExpansion interface{}
+
 // NATRuleListerExpansion allows custom methods to be added to
 // NATRuleLister.
 type NATRuleListerExpansion interface{}

@@ -2,7 +2,7 @@
 
 module github.com/cho4036/virtualrouter
 
-go 1.15
+go 1.16
 
 require (
 	github.com/containerd/containerd v1.5.0 // indirect
@@ -32,7 +32,7 @@ replace (
 	k8s.io/client-go => k8s.io/client-go v0.0.0-20210329193902-8b9f5901612d
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.19.0
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.19.0
-	k8s.io/code-generator => k8s.io/code-generator v0.19.0
+	k8s.io/code-generator => k8s.io/code-generator v0.19.5
 	k8s.io/component-base => k8s.io/component-base v0.19.0
 	k8s.io/cri-api => k8s.io/cri-api v0.19.0
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.19.0

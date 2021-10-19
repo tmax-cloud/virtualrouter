@@ -31,7 +31,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	"github.com/cho4036/virtualrouter/natrulecontroller"
+	"github.com/cho4036/virtualrouter/iptablescontroller"
 	v1 "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller/v1"
 	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
 	samplescheme "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned/scheme"
@@ -66,6 +66,14 @@ type natRuleKey string
 type natRuleChangeKey string
 type natRuleDeleteKey string
 
+type firewallRuleKey string
+type firewallRuleChangeKey string
+type firewallRuleDeleteKey string
+
+type loadbalanceRuleKey string
+type loadbalanceRuleChangeKey string
+type loadbalanceRuleDeleteKey string
+
 type SyncState int
 
 // Controller is the controller implementation for Foo resources
@@ -75,7 +83,9 @@ type Controller struct {
 	// sampleclientset is a clientset for our own API group
 	sampleclientset clientset.Interface
 
-	natRulesLister listers.NATRuleLister
+	natRulesLister          listers.NATRuleLister
+	firewallRulesLister     listers.FireWallRuleLister
+	loadbalancerRulesLister listers.LoadBalancerRuleLister
 
 	syncFuncs []cache.InformerSynced
 
@@ -90,7 +100,7 @@ type Controller struct {
 	// Kubernetes API.
 	recorder record.EventRecorder
 
-	natruleController *natrulecontroller.NatRuleController
+	iptablescontroller *iptablescontroller.Iptablescontroller
 }
 
 // NewController returns a new sample controller
@@ -98,7 +108,9 @@ func NewController(
 	kubeclientset kubernetes.Interface,
 	sampleclientset clientset.Interface,
 	natRuleInformer informers.NATRuleInformer,
-	natruleController *natrulecontroller.NatRuleController) *Controller {
+	firewallruleInformer informers.FireWallRuleInformer,
+	loadbalancerruleInformer informers.LoadBalancerRuleInformer,
+	iptablescontroller *iptablescontroller.Iptablescontroller) *Controller {
 
 	// Create event broadcaster
 	// Add virtual-router types to the default Kubernetes Scheme so Events can be
@@ -111,14 +123,18 @@ func NewController(
 	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 
 	controller := &Controller{
-		kubeclientset:   kubeclientset,
-		sampleclientset: sampleclientset,
-		natRulesLister:  natRuleInformer.Lister(),
-		syncFuncs:       make([]cache.InformerSynced, 0),
-		workqueue:       workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
-		recorder:        recorder,
+		kubeclientset:           kubeclientset,
+		sampleclientset:         sampleclientset,
+		natRulesLister:          natRuleInformer.Lister(),
+		firewallRulesLister:     firewallruleInformer.Lister(),
+		loadbalancerRulesLister: loadbalancerruleInformer.Lister(),
+		syncFuncs:               make([]cache.InformerSynced, 0),
+		workqueue:               workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter()),
+		recorder:                recorder,
 	}
 	controller.syncFuncs = append(controller.syncFuncs, natRuleInformer.Informer().HasSynced)
+	controller.syncFuncs = append(controller.syncFuncs, firewallruleInformer.Informer().HasSynced)
+	controller.syncFuncs = append(controller.syncFuncs, loadbalancerruleInformer.Informer().HasSynced)
 
 	klog.Info("Setting up event handlers")
 	// Set up an event handler for when Foo resources change
@@ -150,8 +166,64 @@ func NewController(
 			}
 		},
 	})
+	firewallruleInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err != nil {
+				utilruntime.HandleError(err)
+			} else {
+				controller.workqueue.Add(firewallRuleKey(key))
+			}
+		},
 
-	controller.natruleController = natruleController
+		UpdateFunc: func(old, new interface{}) {
+			key, err := cache.MetaNamespaceKeyFunc(new)
+			if err != nil {
+				utilruntime.HandleError(err)
+			} else {
+				controller.workqueue.Add(firewallRuleChangeKey(key))
+			}
+		},
+
+		DeleteFunc: func(obj interface{}) {
+			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+			if err != nil {
+				utilruntime.HandleError(err)
+			} else {
+				controller.workqueue.Add(firewallRuleDeleteKey(key))
+			}
+		},
+	})
+	loadbalancerruleInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err != nil {
+				utilruntime.HandleError(err)
+			} else {
+				controller.workqueue.Add(loadbalanceRuleKey(key))
+			}
+		},
+
+		UpdateFunc: func(old, new interface{}) {
+			key, err := cache.MetaNamespaceKeyFunc(new)
+			if err != nil {
+				utilruntime.HandleError(err)
+			} else {
+				controller.workqueue.Add(loadbalanceRuleChangeKey(key))
+			}
+		},
+
+		DeleteFunc: func(obj interface{}) {
+			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+			if err != nil {
+				utilruntime.HandleError(err)
+			} else {
+				controller.workqueue.Add(loadbalanceRuleDeleteKey(key))
+			}
+		},
+	})
+
+	controller.iptablescontroller = iptablescontroller
 	return controller
 }
 
@@ -259,6 +331,32 @@ func (c *Controller) syncHandler(key interface{}) SyncState {
 		if err := c.deleteNatRule(string(k)); err != nil {
 			return SyncStateError
 		}
+
+	case firewallRuleKey:
+		if err := c.addFirewallRule(string(k)); err != nil {
+			return SyncStateError
+		}
+	case firewallRuleChangeKey:
+		if err := c.updateFirewallRule(string(k)); err != nil {
+			return SyncStateError
+		}
+	case firewallRuleDeleteKey:
+		if err := c.deleteFirewallRule(string(k)); err != nil {
+			return SyncStateError
+		}
+
+	case loadbalanceRuleKey:
+		if err := c.addLoadbalanceRule(string(k)); err != nil {
+			return SyncStateError
+		}
+	case loadbalanceRuleChangeKey:
+		if err := c.updateLoadbalanceRule(string(k)); err != nil {
+			return SyncStateError
+		}
+	case loadbalanceRuleDeleteKey:
+		if err := c.deleteLoadbalanceRule(string(k)); err != nil {
+			return SyncStateError
+		}
 	}
 
 	// Convert the namespace/name string into a distinct namespace and name
@@ -279,8 +377,8 @@ func (c *Controller) addNatRule(key string) error {
 		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
 		return nil
 	}
-	// rule add iptables
-	c.natruleController.OnAdd(natRule)
+
+	c.iptablescontroller.OnNATAdd(natRule)
 	return nil
 }
 
@@ -296,8 +394,7 @@ func (c *Controller) updateNatRule(key string) error {
 		return nil
 	}
 
-	// rule add iptables
-	c.natruleController.OnUpdate(natRule)
+	c.iptablescontroller.OnNATUpdate(natRule)
 	return nil
 }
 
@@ -311,33 +408,98 @@ func (c *Controller) deleteNatRule(key string) error {
 	emptyObj.SetName(name)
 	emptyObj.SetNamespace(namespace)
 
-	// rule add iptables
-	c.natruleController.OnDelete(emptyObj)
+	c.iptablescontroller.OnNATDelete(emptyObj)
 	return nil
 }
 
-// func (c *Controller) execIPtables(op string, rule *v1.NATRule) {
-// 	switch op {
-// 	case "ADD":
-// 		var tableName string = "nat"
-// 		buffer := new(bytes.Buffer)
-// 		if err := c.iptablesV4.SaveInto(iptables.TableName(tableName), buffer); err != nil {
-// 			fmt.Errorf(err)
-// 		}
+func (c *Controller) addFirewallRule(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	firewallRule, err := c.firewallRulesLister.FireWallRules(namespace).Get(name)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
 
-// 		buffer.WriteString(
+	c.iptablescontroller.OnFirewallAdd(firewallRule)
+	return nil
+}
 
-// 		)
+func (c *Controller) updateFirewallRule(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	firewallRule, err := c.firewallRulesLister.FireWallRules(namespace).Get(name)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
 
-// 		var chainName string
-// 		for _, val := range rule.Spec.Rules{
-// 			if val.Action.DstIP != "" {
-// 				chainName = "PREROUTING"
-// 			} else {
-// 				chainName = "POSTROUTING"
-// 			}
-// 		}
-// 		if rule.Spec.Rules
+	c.iptablescontroller.OnFirewallUpdate(firewallRule)
+	return nil
+}
 
-// 	}
-// }
+func (c *Controller) deleteFirewallRule(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	emptyObj := &v1.FireWallRule{}
+	emptyObj.SetName(name)
+	emptyObj.SetNamespace(namespace)
+
+	c.iptablescontroller.OnFirewallDelete(emptyObj)
+	return nil
+}
+
+func (c *Controller) addLoadbalanceRule(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	loadbalanceRule, err := c.loadbalancerRulesLister.LoadBalancerRules(namespace).Get(name)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+
+	c.iptablescontroller.OnLoadbalanceAdd(loadbalanceRule)
+	return nil
+}
+
+func (c *Controller) updateLoadbalanceRule(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	loadbalanceRule, err := c.loadbalancerRulesLister.LoadBalancerRules(namespace).Get(name)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+
+	c.iptablescontroller.OnLoadbalanceUpdate(loadbalanceRule)
+	return nil
+}
+
+func (c *Controller) deleteLoadbalanceRule(key string) error {
+	namespace, name, err := cache.SplitMetaNamespaceKey(key)
+	if err != nil {
+		utilruntime.HandleError(fmt.Errorf("invalid resource key: %s", key))
+		return nil
+	}
+	emptyObj := &v1.LoadBalancerRule{}
+	emptyObj.SetName(name)
+	emptyObj.SetNamespace(namespace)
+
+	c.iptablescontroller.OnLoadbalanceDelete(emptyObj)
+	return nil
+}
