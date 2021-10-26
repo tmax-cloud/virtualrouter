@@ -28,7 +28,7 @@ def docker_push(name, tag, registry):
     return "", ""
 
 def main():
-    PKG_NAME = 'github.com/cho4036/virtualrouter'
+    PKG_NAME = 'github.com/tmax-cloud/virtualrouter'
     GO_BINARY_NAME = 'virtualrouter'
     DOCKER_REGISTRY = '10.0.0.4:5000/'
     DOCKER_IMAGE_NAME = "virtualrouter"
