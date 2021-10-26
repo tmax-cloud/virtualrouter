@@ -1,6 +1,6 @@
 // This is a generated file. Do not edit directly.
 
-module github.com/cho4036/virtualrouter
+module github.com/tmax-cloud/virtualrouter
 
 go 1.16
 

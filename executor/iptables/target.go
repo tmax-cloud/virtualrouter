@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	utilNet "github.com/cho4036/virtualrouter/util/net"
+	utilNet "github.com/tmax-cloud/virtualrouter/util/net"
 )
 
 type TargetCommand string

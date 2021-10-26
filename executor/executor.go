@@ -1,6 +1,6 @@
 package executor
 
-import "github.com/cho4036/virtualrouter/executor/iptables"
+import "github.com/tmax-cloud/virtualrouter/executor/iptables"
 
 type Interface interface {
 	IPTABLESV4() iptables.IPV4Interface

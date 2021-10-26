@@ -29,11 +29,11 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	"github.com/cho4036/virtualrouter/executor/iptables"
-	"github.com/cho4036/virtualrouter/iptablescontroller"
-	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
-	informers "github.com/cho4036/virtualrouter/pkg/client/informers/externalversions"
-	"github.com/cho4036/virtualrouter/pkg/signals"
+	"github.com/tmax-cloud/virtualrouter/executor/iptables"
+	"github.com/tmax-cloud/virtualrouter/iptablescontroller"
+	clientset "github.com/tmax-cloud/virtualrouter/pkg/client/clientset/versioned"
+	informers "github.com/tmax-cloud/virtualrouter/pkg/client/informers/externalversions"
+	"github.com/tmax-cloud/virtualrouter/pkg/signals"
 	"github.com/vishvananda/netlink"
 )
 

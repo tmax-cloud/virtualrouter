@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cho4036/virtualrouter/executor/iptables"
-	v1 "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller/v1"
+	"github.com/tmax-cloud/virtualrouter/executor/iptables"
+	v1 "github.com/tmax-cloud/virtualrouter/pkg/apis/networkcontroller/v1"
 	"k8s.io/klog/v2"
 )
 

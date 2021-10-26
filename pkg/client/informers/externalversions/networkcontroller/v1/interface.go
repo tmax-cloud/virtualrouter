@@ -19,7 +19,7 @@ limitations under the License.
 package v1
 
 import (
-	internalinterfaces "github.com/cho4036/virtualrouter/pkg/client/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/tmax-cloud/virtualrouter/pkg/client/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

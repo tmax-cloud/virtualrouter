@@ -3,7 +3,7 @@ package executorFactory
 import (
 	"sync"
 
-	"github.com/cho4036/virtualrouter/executor/iptables"
+	"github.com/tmax-cloud/virtualrouter/executor/iptables"
 )
 
 type ExecutorFactory interface {

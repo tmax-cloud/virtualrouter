@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	networkcontroller "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller"
+	networkcontroller "github.com/tmax-cloud/virtualrouter/pkg/apis/networkcontroller"
 )
 
 var SchemeGroupVersion = schema.GroupVersion{

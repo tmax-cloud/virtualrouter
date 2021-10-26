@@ -3,7 +3,7 @@ package iptables
 import (
 	"bytes"
 
-	v1 "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller/v1"
+	v1 "github.com/tmax-cloud/virtualrouter/pkg/apis/networkcontroller/v1"
 )
 
 func NF_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer, args ...string) {

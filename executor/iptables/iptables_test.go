@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/cho4036/virtualrouter/executor/iptables"
-	v1 "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller/v1"
+	"github.com/tmax-cloud/virtualrouter/executor/iptables"
+	v1 "github.com/tmax-cloud/virtualrouter/pkg/apis/networkcontroller/v1"
 )
 
 func TestIPTables(t *testing.T) {

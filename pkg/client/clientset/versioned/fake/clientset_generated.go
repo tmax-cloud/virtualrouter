@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
-	tmaxv1 "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned/typed/networkcontroller/v1"
-	faketmaxv1 "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned/typed/networkcontroller/v1/fake"
+	clientset "github.com/tmax-cloud/virtualrouter/pkg/client/clientset/versioned"
+	tmaxv1 "github.com/tmax-cloud/virtualrouter/pkg/client/clientset/versioned/typed/networkcontroller/v1"
+	faketmaxv1 "github.com/tmax-cloud/virtualrouter/pkg/client/clientset/versioned/typed/networkcontroller/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
