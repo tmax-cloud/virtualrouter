@@ -1,0 +1,586 @@
+@startuml
+namespace builder {
+    interface RuleManagerFactory  {
+        + Start(stopch <font color=blue>chan</font> <font color=blue>struct</font>{}) 
+        + ImportManager( rulemanager.Interface) 
+        + Nat( rulemanager.RuleManagerConfig) rulemanager.Interface
+
+    }
+    class ruleManagerFactory << (S,Aquamarine) >> {
+        - lock "sync.Mutex
+        - managers <font color=blue>map</font>["reflect.Type]rulemanager.Interface
+        - startedManager <font color=blue>map</font>["reflect.Type]bool
+
+        + Start(stopch <font color=blue>chan</font> <font color=blue>struct</font>{}) 
+        + ImportManager(manager rulemanager.Interface) 
+        + Nat(cfg rulemanager.RuleManagerConfig) rulemanager.Interface
+
+    }
+}
+
+"builder.RuleManagerFactory" <|-- "builder.ruleManagerFactory"
+
+namespace exec {
+    interface Cmd  {
+        + Run() error
+        + CombinedOutput() ([]byte, error)
+        + Output() ([]byte, error)
+        + SetDir(dir string) 
+        + SetStdin(in io.Reader) 
+        + SetStdout(out io.Writer) 
+        + SetStderr(out io.Writer) 
+        + SetEnv(env []string) 
+        + StdoutPipe() (io.ReadCloser, error)
+        + StderrPipe() (io.ReadCloser, error)
+        + Start() error
+        + Wait() error
+        + Stop() 
+
+    }
+    class CodeExitError << (S,Aquamarine) >> {
+        + Err error
+        + Code int
+
+        + Error() string
+        + String() string
+        + Exited() bool
+        + ExitStatus() int
+
+    }
+    interface ExitError  {
+        + String() string
+        + Error() string
+        + Exited() bool
+        + ExitStatus() int
+
+    }
+    class ExitErrorWrapper << (S,Aquamarine) >> {
+        + ExitStatus() int
+
+    }
+    interface Interface  {
+        + Command(cmd string, args ...string) Cmd
+        + CommandContext(ctx context.Context, cmd string, args ...string) Cmd
+        + LookPath(file string) (string, error)
+
+    }
+    class cmdWrapper << (S,Aquamarine) >> {
+        + SetDir(dir string) 
+        + SetStdin(in io.Reader) 
+        + SetStdout(out io.Writer) 
+        + SetStderr(out io.Writer) 
+        + SetEnv(env []string) 
+        + StdoutPipe() (io.ReadCloser, error)
+        + StderrPipe() (io.ReadCloser, error)
+        + Start() error
+        + Wait() error
+        + Run() error
+        + CombinedOutput() ([]byte, error)
+        + Output() ([]byte, error)
+        + Stop() 
+
+    }
+    class exec.cmdWrapper << (T, #FF7700) >>  {
+    }
+    class executor << (S,Aquamarine) >> {
+        + Command(cmd string, args ...string) Cmd
+        + CommandContext(ctx context.Context, cmd string, args ...string) Cmd
+        + LookPath(file string) (string, error)
+
+    }
+    class "exec.Cmd" as execCmd {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+}
+"exec.ExitError" *-- "exec.ExitErrorWrapper"
+
+"exec.ExitError" <|-- "exec.CodeExitError"
+"exec.Cmd" <|-- "exec.cmdWrapper"
+"exec.Interface" <|-- "exec.executor"
+
+namespace executor {
+    interface Cmd  {
+    }
+    interface Executor  {
+        + IPtables() iptables.Interface
+        + IPtablesV6() iptables.Interface
+
+    }
+    class IptablesExecutor << (S,Aquamarine) >> {
+        + IPtables() iptables.Interface
+        + IPtablesV6() iptables.Interface
+
+    }
+    class IptablesV6Executor << (S,Aquamarine) >> {
+    }
+    class executor << (S,Aquamarine) >> {
+    }
+    class executor.ExecuteProgram << (T, #FF7700) >>  {
+    }
+}
+
+"executor.Executor" <|-- "executor.IptablesExecutor"
+
+namespace externalversions {
+    interface GenericInformer  {
+        + Informer() cache.SharedIndexInformer
+        + Lister() cache.GenericLister
+
+    }
+    interface SharedInformerFactory  {
+        + ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
+        + WaitForCacheSync(stopCh <font color=blue>chan</font> <font color=blue>struct</font>{}) <font color=blue>map</font>["reflect.Type]bool
+        + Tmax() networkcontroller.Interface
+
+    }
+    class externalversions.SharedInformerOption << (T, #FF7700) >>  {
+    }
+    class genericInformer << (S,Aquamarine) >> {
+        - informer cache.SharedIndexInformer
+        - resource schema.GroupResource
+
+        + Informer() cache.SharedIndexInformer
+        + Lister() cache.GenericLister
+
+    }
+    class sharedInformerFactory << (S,Aquamarine) >> {
+        - client versioned.Interface
+        - namespace string
+        - tweakListOptions internalinterfaces.TweakListOptionsFunc
+        - lock "sync.Mutex
+        - defaultResync "time.Duration
+        - customResync <font color=blue>map</font>["reflect.Type]"time.Duration
+        - informers <font color=blue>map</font>["reflect.Type]cache.SharedIndexInformer
+        - startedInformers <font color=blue>map</font>["reflect.Type]bool
+
+        + Start(stopCh <font color=blue>chan</font> <font color=blue>struct</font>{}) 
+        + WaitForCacheSync(stopCh <font color=blue>chan</font> <font color=blue>struct</font>{}) <font color=blue>map</font>["reflect.Type]bool
+        + InformerFor(obj runtime.Object, newFunc internalinterfaces.NewInformerFunc) cache.SharedIndexInformer
+        + Tmax() networkcontroller.Interface
+        + ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
+
+    }
+}
+
+"externalversions.GenericInformer" <|-- "externalversions.genericInformer"
+"externalversions.SharedInformerFactory" <|-- "externalversions.sharedInformerFactory"
+"internalinterfaces.SharedInformerFactory" <|-- "externalversions.sharedInformerFactory"
+
+namespace fake {
+    class Clientset << (S,Aquamarine) >> {
+        - discovery *fake.FakeDiscovery
+        - tracker testing.ObjectTracker
+
+        + Discovery() discovery.DiscoveryInterface
+        + Tracker() testing.ObjectTracker
+        + TmaxV1() v1.TmaxV1Interface
+
+    }
+    class FakeNATRules << (S,Aquamarine) >> {
+        - ns string
+
+        + Fake *FakeTmaxV1
+
+        + Get(ctx context.Context, name string, options v1.GetOptions) (*v1.NATRule, error)
+        + List(ctx context.Context, opts v1.ListOptions) (*v1.NATRuleList, error)
+        + Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+        + Create(ctx context.Context, nATRule *v1.NATRule, opts v1.CreateOptions) (*v1.NATRule, error)
+        + Update(ctx context.Context, nATRule *v1.NATRule, opts v1.UpdateOptions) (*v1.NATRule, error)
+        + UpdateStatus(ctx context.Context, nATRule *v1.NATRule, opts v1.UpdateOptions) (*v1.NATRule, error)
+        + Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+        + DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+        + Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1.NATRule, error)
+
+    }
+    class FakeTmaxV1 << (S,Aquamarine) >> {
+        + NATRules(namespace string) v1.NATRuleInterface
+        + RESTClient() rest.Interface
+
+    }
+}
+"testing.Fake" *-- "fake.Clientset"
+"testing.Fake" *-- "fake.FakeTmaxV1"
+
+"versioned.Interface" <|-- "fake.Clientset"
+"v1.NATRuleInterface" <|-- "fake.FakeNATRules"
+"v1.NATRulesGetter" <|-- "fake.FakeTmaxV1"
+"v1.TmaxV1Interface" <|-- "fake.FakeTmaxV1"
+
+namespace internalinterfaces {
+    interface SharedInformerFactory  {
+        + Start(stopCh <font color=blue>chan</font> <font color=blue>struct</font>{}) 
+        + InformerFor(obj runtime.Object, newFunc NewInformerFunc) cache.SharedIndexInformer
+
+    }
+    class internalinterfaces.NewInformerFunc << (T, #FF7700) >>  {
+    }
+    class internalinterfaces.TweakListOptionsFunc << (T, #FF7700) >>  {
+    }
+    class "<font color=blue>func</font>(*v1.ListOptions) " as fontcolorbluefuncfontv1ListOptions {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+    class "<font color=blue>func</font>(versioned.Interface, "time.Duration) cache.SharedIndexInformer" as fontcolorbluefuncfontversionedInterfacetimeDurationcacheSharedIndexInformer {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+}
+
+
+namespace iptables {
+    interface Interface  {
+        + EnsureChian(table Table, chain Chain) (bool, error)
+        + FlushChain(table Table, chain Chain) error
+        + DeleteChain(table Table, chain Chain) error
+        + EnsureRule(position RulePosition, table Table, chain Chain, args ...string) (bool, error)
+        + DeleteRule(table Table, chain Chain, args ...string) error
+        + SaveInto(table Table, buffer *bytes.Buffer) error
+        + Restore(table Table, data []byte, flush FlushFlag, counters RestoreCountersFlag) error
+        + RestoreAll(data []byte, flush FlushFlag, counters RestoreCountersFlag) error
+
+    }
+    class iptables << (S,Aquamarine) >> {
+        + New(protocol string) Interface
+
+    }
+    class iptables.Chain << (T, #FF7700) >>  {
+    }
+    class iptables.FlushFlag << (T, #FF7700) >>  {
+    }
+    class iptables.IptablesCommand << (T, #FF7700) >>  {
+    }
+    class iptables.Protocol << (T, #FF7700) >>  {
+    }
+    class iptables.RestoreCountersFlag << (T, #FF7700) >>  {
+    }
+    class iptables.RulePosition << (T, #FF7700) >>  {
+    }
+    class iptables.Table << (T, #FF7700) >>  {
+    }
+    class iptables.operation << (T, #FF7700) >>  {
+    }
+    interface iptablesLocker  {
+        + Close() error
+
+    }
+    class locker << (S,Aquamarine) >> {
+        - lock16 *os.File
+        - lock14 *net.UnixListener
+
+        + Close() error
+
+    }
+    class runner << (S,Aquamarine) >> {
+        - mu "sync.Mutex
+        - exec exec.Interface
+        - hasCheck bool
+        - waitFlag []string
+        - restoreWaitFlag []string
+        - protocol Protocol
+        - lockfilePath string
+
+        - restoreInternal(args []string, data []byte, flush FlushFlag, counters RestoreCountersFlag) error
+        - run(op operation, args []string) ([]byte, error)
+        - runContext(ctx context.Context, op operation, args []string) ([]byte, error)
+        - checkRule(table Table, chain Chain, args ...string) (bool, error)
+        - checkRuleUsingCheck(args []string) (bool, error)
+        - checkRuleWithoutCheck(table Table, chain Chain, args ...string) (bool, error)
+
+        + EnsureChian(table Table, chain Chain) (bool, error)
+        + FlushChain(table Table, chain Chain) error
+        + DeleteChain(table Table, chain Chain) error
+        + EnsureRule(position RulePosition, table Table, chain Chain, args ...string) (bool, error)
+        + DeleteRule(table Table, chain Chain, args ...string) error
+        + SaveInto(table Table, buffer *bytes.Buffer) error
+        + Restore(table Table, data []byte, flush FlushFlag, counters RestoreCountersFlag) error
+        + RestoreAll(data []byte, flush FlushFlag, counters RestoreCountersFlag) error
+
+    }
+}
+
+"iptables.iptablesLocker" <|-- "iptables.locker"
+"iptables.Interface" <|-- "iptables.runner"
+
+namespace main {
+    class Controller << (S,Aquamarine) >> {
+        - kubeclientset kubernetes.Interface
+        - sampleclientset versioned.Interface
+        - natRulesLister v1.NATRuleLister
+        - syncFuncs []cache.InformerSynced
+        - workqueue workqueue.RateLimitingInterface
+        - natWorkqueue workqueue.Interface
+        - recorder record.EventRecorder
+
+        - runWorker() 
+        - processNextWorkItem() bool
+        - syncHandler(key <font color=blue>interface</font>{}) SyncState
+        - addNatRule(key string) error
+        - updateNatRule(key string) error
+
+        + Run(threadiness int, stopCh <font color=blue>chan</font> <font color=blue>struct</font>{}) error
+
+    }
+    class Handler << (S,Aquamarine) >> {
+    }
+    interface handler  {
+        - getBridge() 
+        - setBridge() 
+        - setLink(_type string, name string) 
+
+    }
+    class main.SyncState << (T, #FF7700) >>  {
+    }
+    class main.dockerType << (T, #FF7700) >>  {
+    }
+    class main.natRuleChangeKey << (T, #FF7700) >>  {
+    }
+    class main.natRuleKey << (T, #FF7700) >>  {
+    }
+}
+"netlink.Handle" *-- "main.Handler"
+
+
+namespace natrulemanager {
+    class natRuleManager << (S,Aquamarine) >> {
+        - executor executor.Executor
+        - ruleChannel <font color=blue>interface</font>{}
+
+        - runIptables(stopch <font color=blue>chan</font> <font color=blue>struct</font>{}) error
+
+        + Run(stopch <font color=blue>chan</font> <font color=blue>struct</font>{}) error
+        + SetExecutor() 
+
+    }
+}
+
+"rulemanager.Interface" <|-- "natrulemanager.natRuleManager"
+
+namespace networkcontroller {
+    interface Interface  {
+        + V1() v1.Interface
+
+    }
+    class group << (S,Aquamarine) >> {
+        - factory internalinterfaces.SharedInformerFactory
+        - namespace string
+        - tweakListOptions internalinterfaces.TweakListOptionsFunc
+
+        + V1() v1.Interface
+
+    }
+}
+
+"networkcontroller.Interface" <|-- "networkcontroller.group"
+
+namespace queue {
+    class Queue << (S,Aquamarine) >> {
+        + Items []*[]byte
+
+        + Set(value *[]byte) 
+        + Get() *[]byte
+
+    }
+}
+
+
+namespace rulemanager {
+    interface Interface  {
+        + Run(stopch <font color=blue>chan</font> <font color=blue>struct</font>{}) error
+
+    }
+    class RuleManagerConfig << (S,Aquamarine) >> {
+        + Executor executor.ExecuteProgram
+        + Rulechannel <font color=blue>interface</font>{}
+
+    }
+}
+
+
+namespace v1 {
+    interface Interface  {
+        + NATRules() NATRuleInformer
+
+    }
+    class NATRule << (S,Aquamarine) >> {
+        + Spec NATRuleSpec
+        + Status NATRuleStatus
+
+        + DeepCopyInto(out *NATRule) 
+        + DeepCopy() *NATRule
+        + DeepCopyObject() runtime.Object
+
+    }
+    interface NATRuleExpansion  {
+    }
+    interface NATRuleInformer  {
+        + Informer() cache.SharedIndexInformer
+        + Lister() v1.NATRuleLister
+
+    }
+    interface NATRuleInterface  {
+        + Create(ctx context.Context, nATRule *v1.NATRule, opts v1.CreateOptions) (*v1.NATRule, error)
+        + Update(ctx context.Context, nATRule *v1.NATRule, opts v1.UpdateOptions) (*v1.NATRule, error)
+        + UpdateStatus(ctx context.Context, nATRule *v1.NATRule, opts v1.UpdateOptions) (*v1.NATRule, error)
+        + Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+        + DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+        + Get(ctx context.Context, name string, opts v1.GetOptions) (*v1.NATRule, error)
+        + List(ctx context.Context, opts v1.ListOptions) (*v1.NATRuleList, error)
+        + Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+        + Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1.NATRule, error)
+
+    }
+    class NATRuleList << (S,Aquamarine) >> {
+        + Items []NATRule
+
+        + DeepCopyInto(out *NATRuleList) 
+        + DeepCopy() *NATRuleList
+        + DeepCopyObject() runtime.Object
+
+    }
+    interface NATRuleLister  {
+        + List(selector labels.Selector) ([]*v1.NATRule, error)
+        + NATRules(namespace string) NATRuleNamespaceLister
+
+    }
+    interface NATRuleListerExpansion  {
+    }
+    interface NATRuleNamespaceLister  {
+        + List(selector labels.Selector) ([]*v1.NATRule, error)
+        + Get(name string) (*v1.NATRule, error)
+
+    }
+    interface NATRuleNamespaceListerExpansion  {
+    }
+    class NATRuleSpec << (S,Aquamarine) >> {
+        + SrcIP string
+        + DstIP string
+
+        + DeepCopyInto(out *NATRuleSpec) 
+        + DeepCopy() *NATRuleSpec
+
+    }
+    class NATRuleStatus << (S,Aquamarine) >> {
+        + Deployed string
+        + OldSrcIP string
+        + OldDstIP string
+
+        + DeepCopyInto(out *NATRuleStatus) 
+        + DeepCopy() *NATRuleStatus
+
+    }
+    interface NATRulesGetter  {
+        + NATRules(namespace string) NATRuleInterface
+
+    }
+    class TmaxV1Client << (S,Aquamarine) >> {
+        - restClient rest.Interface
+
+        + NATRules(namespace string) NATRuleInterface
+        + RESTClient() rest.Interface
+
+    }
+    interface TmaxV1Interface  {
+        + RESTClient() rest.Interface
+
+    }
+    class nATRuleInformer << (S,Aquamarine) >> {
+        - factory internalinterfaces.SharedInformerFactory
+        - tweakListOptions internalinterfaces.TweakListOptionsFunc
+        - namespace string
+
+        - defaultInformer(client versioned.Interface, resyncPeriod "time.Duration) cache.SharedIndexInformer
+
+        + Informer() cache.SharedIndexInformer
+        + Lister() v1.NATRuleLister
+
+    }
+    class nATRuleLister << (S,Aquamarine) >> {
+        - indexer cache.Indexer
+
+        + List(selector labels.Selector) ([]*v1.NATRule, error)
+        + NATRules(namespace string) NATRuleNamespaceLister
+
+    }
+    class nATRuleNamespaceLister << (S,Aquamarine) >> {
+        - indexer cache.Indexer
+        - namespace string
+
+        + List(selector labels.Selector) ([]*v1.NATRule, error)
+        + Get(name string) (*v1.NATRule, error)
+
+    }
+    class nATRules << (S,Aquamarine) >> {
+        - client rest.Interface
+        - ns string
+
+        + Get(ctx context.Context, name string, options v1.GetOptions) (*v1.NATRule, error)
+        + List(ctx context.Context, opts v1.ListOptions) (*v1.NATRuleList, error)
+        + Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+        + Create(ctx context.Context, nATRule *v1.NATRule, opts v1.CreateOptions) (*v1.NATRule, error)
+        + Update(ctx context.Context, nATRule *v1.NATRule, opts v1.UpdateOptions) (*v1.NATRule, error)
+        + UpdateStatus(ctx context.Context, nATRule *v1.NATRule, opts v1.UpdateOptions) (*v1.NATRule, error)
+        + Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+        + DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+        + Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (*v1.NATRule, error)
+
+    }
+    class version << (S,Aquamarine) >> {
+        - factory internalinterfaces.SharedInformerFactory
+        - namespace string
+        - tweakListOptions internalinterfaces.TweakListOptionsFunc
+
+        + NATRules() NATRuleInformer
+
+    }
+}
+"v1.ObjectMeta" *-- "v1.NATRule"
+"v1.TypeMeta" *-- "v1.NATRule"
+"v1.NATRuleExpansion" *-- "v1.NATRuleInterface"
+"v1.ListMeta" *-- "v1.NATRuleList"
+"v1.TypeMeta" *-- "v1.NATRuleList"
+"v1.NATRuleListerExpansion" *-- "v1.NATRuleLister"
+"v1.NATRuleNamespaceListerExpansion" *-- "v1.NATRuleNamespaceLister"
+"v1.NATRulesGetter" *-- "v1.TmaxV1Interface"
+
+"v1.NATRulesGetter" <|-- "v1.TmaxV1Client"
+"v1.TmaxV1Interface" <|-- "v1.TmaxV1Client"
+"v1.NATRuleInformer" <|-- "v1.nATRuleInformer"
+"v1.NATRuleLister" <|-- "v1.nATRuleLister"
+"v1.NATRuleNamespaceLister" <|-- "v1.nATRuleNamespaceLister"
+"v1.NATRuleInterface" <|-- "v1.nATRules"
+"v1.Interface" <|-- "v1.version"
+
+namespace versioned {
+    class Clientset << (S,Aquamarine) >> {
+        - tmaxV1 *v1.TmaxV1Client
+
+        + TmaxV1() v1.TmaxV1Interface
+        + Discovery() discovery.DiscoveryInterface
+
+    }
+    interface Interface  {
+        + Discovery() discovery.DiscoveryInterface
+        + TmaxV1() v1.TmaxV1Interface
+
+    }
+}
+"discovery.DiscoveryClient" *-- "versioned.Clientset"
+
+"versioned.Interface" <|-- "versioned.Clientset"
+
+"__builtin__.bool" #.. "iptables.FlushFlag"
+"__builtin__.bool" #.. "iptables.RestoreCountersFlag"
+"__builtin__.int" #.. "main.SyncState"
+"__builtin__.string" #.. "executor.ExecuteProgram"
+"__builtin__.string" #.. "iptables.Chain"
+"__builtin__.string" #.. "iptables.IptablesCommand"
+"__builtin__.string" #.. "iptables.Protocol"
+"__builtin__.string" #.. "iptables.RulePosition"
+"__builtin__.string" #.. "iptables.Table"
+"__builtin__.string" #.. "iptables.operation"
+"__builtin__.string" #.. "main.dockerType"
+"__builtin__.string" #.. "main.natRuleChangeKey"
+"__builtin__.string" #.. "main.natRuleKey"
+"exec.execCmd" #.. "exec.cmdWrapper"
+"externalversions.<font color=blue>func</font>(*sharedInformerFactory) *sharedInformerFactory" #.. "externalversions.SharedInformerOption"
+"internalinterfaces.fontcolorbluefuncfontv1ListOptions" #.. "internalinterfaces.TweakListOptionsFunc"
+"internalinterfaces.fontcolorbluefuncfontversionedInterfacetimeDurationcacheSharedIndexInformer" #.. "internalinterfaces.NewInformerFunc"
+@enduml
