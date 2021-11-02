@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"os"
 	"os/exec"
 	"time"
 
@@ -70,6 +71,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
+	namespace := os.Getenv("POD_NAMESPACE")
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -82,7 +84,8 @@ func main() {
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	nfvInformerFactory := informers.NewSharedInformerFactory(nfvClient, time.Second*30)
+	// nfvInformerFactory := informers.NewSharedInformerFactory(nfvClient, time.Second*30)
+	nfvInformerFactory := informers.NewFilteredSharedInformerFactory(nfvClient, time.Second*30, namespace, nil)
 
 	cmd := exec.Command("sysctl", "-p")
 	if err := cmd.Run(); err != nil {
