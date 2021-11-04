@@ -126,23 +126,46 @@ type Rules struct {
 }
 
 type LBRules struct {
-	LoadBalancerIP string     `json:"loadBalancerIP"`
-	BackendIPs     []LBTarget `json:"backendIPs"`
+	LoadBalancerIP   string      `json:"loadBalancerIP"`
+	LoadBalancerPort string      `json:"loadBalancerPort"`
+	Backends         backendList `json:"backends"`
+	Healthcheck      bool        `json:"healthckeck"`
 }
 
-type LBTarget struct {
-	BackendIP string `json:"backendIP"`
-	Weight    int    `json:"weight"`
+type Backends struct {
+	BackendIP       string `json:"backendIP"`
+	BackendPort     string `json:"backendPort"`
+	Weight          int    `json:"weight"`
+	HealthCheckIP   string `json:"healthcheckIP"`
+	HealthCheckPort string `json:"healthcheckPort"`
 }
 
 type Match struct {
 	SrcIP    string `json:"srcIP"`
 	DstIP    string `json:"dstIP"`
+	SrcPort  string `json:"srcPort"`
+	DstPort  string `json:"dstPort"`
 	Protocol string `json:"protocol"`
 }
 
 type Action struct {
-	SrcIP  string `json:"srcIP"`
-	DstIP  string `json:"dstIP"`
-	Policy string `json:"policy"`
+	SrcIP   string `json:"srcIP"`
+	DstIP   string `json:"dstIP"`
+	SrcPort string `json:"srcPort"`
+	DstPort string `json:"dstPort"`
+	Policy  string `json:"policy"`
+}
+
+type backendList []Backends
+
+func (l backendList) Len() int {
+	return len(l)
+}
+
+func (l backendList) Less(i, j int) bool {
+	return l[i].Weight < l[j].Weight
+}
+
+func (l backendList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
 }

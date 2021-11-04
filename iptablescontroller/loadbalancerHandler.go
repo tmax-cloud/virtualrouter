@@ -2,6 +2,7 @@ package iptablescontroller
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/tmax-cloud/virtualrouter/executor/iptables"
@@ -9,11 +10,11 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (n *Iptablescontroller) OnLoadbalanceAdd(loadbalancerrule *v1.LoadBalancerRule) error {
+func (n *Iptablescontroller) OnLoadbalanceAdd(originLoadbalancerrule *v1.LoadBalancerRule) error {
 	n.mu.Lock()
-	klog.Info("onAdd Called")
 	defer n.mu.Unlock()
 
+	loadbalancerrule := originLoadbalancerrule.DeepCopy()
 	n.iptablesdata.Reset()
 
 	n.iptables.SaveInto(iptables.TableNAT, n.iptablesdata)
@@ -64,10 +65,10 @@ func (n *Iptablescontroller) OnLoadbalanceAdd(loadbalancerrule *v1.LoadBalancerR
 	return nil
 }
 
-func (n *Iptablescontroller) OnLoadbalanceDelete(loadbalancerrule *v1.LoadBalancerRule) error {
+func (n *Iptablescontroller) OnLoadbalanceDelete(originLoadbalancerrule *v1.LoadBalancerRule) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	klog.Info("onDelete Called")
+	loadbalancerrule := originLoadbalancerrule.DeepCopy()
 
 	n.iptablesdata.Reset()
 
@@ -111,10 +112,10 @@ func (n *Iptablescontroller) OnLoadbalanceDelete(loadbalancerrule *v1.LoadBalanc
 	return nil
 }
 
-func (n *Iptablescontroller) OnLoadbalanceUpdate(loadbalancerrule *v1.LoadBalancerRule) error {
+func (n *Iptablescontroller) OnLoadbalanceUpdate(originLoadbalancerrule *v1.LoadBalancerRule) error {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	klog.Info("onUpdate Called")
+	loadbalancerrule := originLoadbalancerrule.DeepCopy()
 
 	n.iptablesdata.Reset()
 
@@ -179,15 +180,18 @@ func (n *Iptablescontroller) OnLoadbalanceUpdate(loadbalancerrule *v1.LoadBalanc
 func transLBRule2Rule(lbrule v1.LoadBalancerRule) []*v1.Rules {
 	var rules []*v1.Rules
 
-	for i := range lbrule.Spec.Rules {
-		for j := range lbrule.Spec.Rules[i].BackendIPs {
-			weight := float64(lbrule.Spec.Rules[i].BackendIPs[j].Weight) * 0.01
+	for _, lbObj := range lbrule.Spec.Rules {
+		sort.Sort(lbObj.Backends)
+		for _, backend := range lbObj.Backends {
+			weight := float64(backend.Weight) * 0.01
 			rule := &v1.Rules{
 				Match: v1.Match{
-					DstIP: lbrule.Spec.Rules[i].LoadBalancerIP,
+					DstIP:   lbObj.LoadBalancerIP,
+					DstPort: lbObj.LoadBalancerPort,
 				},
 				Action: v1.Action{
-					DstIP: lbrule.Spec.Rules[i].BackendIPs[j].BackendIP,
+					DstIP:   backend.BackendIP,
+					DstPort: backend.BackendPort,
 				},
 				Args: []string{
 					// "-m statistic --mode random --probability " + strconv.FormatFloat(weight, 'e', -1, 64),
