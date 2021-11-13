@@ -126,18 +126,18 @@ type Rules struct {
 }
 
 type LBRules struct {
-	LoadBalancerIP   string      `json:"loadBalancerIP"`
-	LoadBalancerPort string      `json:"loadBalancerPort"`
-	Backends         backendList `json:"backends"`
-	Healthcheck      bool        `json:"healthckeck"`
+	LoadBalancerIP   string    `json:"loadBalancerIP"`
+	LoadBalancerPort int       `json:"loadBalancerPort"`
+	Backends         []Backend `json:"backends"`
 }
 
-type Backends struct {
-	BackendIP       string `json:"backendIP"`
-	BackendPort     string `json:"backendPort"`
-	Weight          int    `json:"weight"`
-	HealthCheckIP   string `json:"healthcheckIP"`
-	HealthCheckPort string `json:"healthcheckPort"`
+type Backend struct {
+	BackendIP         string `json:"backendIP"`
+	BackendPort       int    `json:"backendPort"`
+	Weight            int    `json:"weight"`
+	HealthCheckIP     string `json:"healthcheckIP"`
+	HealthCheckPort   int    `json:"healthcheckPort"`
+	HealthCheckMethod string `json:"healthcheckMethod"`
 }
 
 type Match struct {
@@ -154,18 +154,4 @@ type Action struct {
 	SrcPort string `json:"srcPort"`
 	DstPort string `json:"dstPort"`
 	Policy  string `json:"policy"`
-}
-
-type backendList []Backends
-
-func (l backendList) Len() int {
-	return len(l)
-}
-
-func (l backendList) Less(i, j int) bool {
-	return l[i].Weight < l[j].Weight
-}
-
-func (l backendList) Swap(i, j int) {
-	l[i], l[j] = l[j], l[i]
 }
