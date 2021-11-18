@@ -53,9 +53,9 @@ var (
 		{iptables.TableMangle, mangleCountForwardChain, iptables.ChainForward, "count forward packets", nil},
 	}
 	iptablesNatJumpChains = []iptablesJumpChain{
-		{iptables.TableNAT, natPreroutingStaticNATChain, iptables.ChainPrerouting, "to staticnat chain", nil},
-		{iptables.TableNAT, natPostroutingStaticNATChain, iptables.ChainPostrouting, "to staticnat chain", nil},
-		{iptables.TableNAT, natPostroutingSNATChain, iptables.ChainPostrouting, "to snat chain", nil},
+		// {iptables.TableNAT, natPreroutingStaticNATChain, iptables.ChainPrerouting, "to staticnat chain", nil},
+		// {iptables.TableNAT, natPostroutingStaticNATChain, iptables.ChainPostrouting, "to staticnat chain", nil},
+		// {iptables.TableNAT, natPostroutingSNATChain, iptables.ChainPostrouting, "to snat chain", nil},
 	}
 	iptablesFilterJumpChains = []iptablesJumpChain{}
 )
@@ -143,6 +143,9 @@ func (n *Iptablescontroller) initialize() error {
 	initNatJumpChains := []iptablesJumpChain{
 		{iptables.TableNAT, NatPreroutingLoadBalanceChain, iptables.ChainPrerouting, "to load balancing chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
 		{iptables.TableNAT, natPostroutingLoadBalanceChain, iptables.ChainPostrouting, "to load balancing chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, natPreroutingStaticNATChain, iptables.ChainPrerouting, "to staticnat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, natPostroutingStaticNATChain, iptables.ChainPostrouting, "to staticnat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, natPostroutingSNATChain, iptables.ChainPostrouting, "to snat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
 	}
 	iptablesNatJumpChains = append(iptablesNatJumpChains, initNatJumpChains...)
 	for _, jump := range iptablesNatJumpChains {

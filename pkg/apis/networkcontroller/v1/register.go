@@ -36,6 +36,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		SchemeGroupVersion,
 		&NATRule{},
 		&NATRuleList{},
+		&FireWallRule{},
+		&FireWallRuleList{},
+		&LoadBalancerRule{},
+		&LoadBalancerRuleList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
