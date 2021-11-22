@@ -126,23 +126,32 @@ type Rules struct {
 }
 
 type LBRules struct {
-	LoadBalancerIP string     `json:"loadBalancerIP"`
-	BackendIPs     []LBTarget `json:"backendIPs"`
+	LoadBalancerIP   string    `json:"loadBalancerIP"`
+	LoadBalancerPort int       `json:"loadBalancerPort"`
+	Backends         []Backend `json:"backends"`
 }
 
-type LBTarget struct {
-	BackendIP string `json:"backendIP"`
-	Weight    int    `json:"weight"`
+type Backend struct {
+	BackendIP         string `json:"backendIP"`
+	BackendPort       int    `json:"backendPort"`
+	Weight            int    `json:"weight"`
+	HealthCheckIP     string `json:"healthcheckIP"`
+	HealthCheckPort   int    `json:"healthcheckPort"`
+	HealthCheckMethod string `json:"healthcheckMethod"`
 }
 
 type Match struct {
 	SrcIP    string `json:"srcIP"`
 	DstIP    string `json:"dstIP"`
+	SrcPort  string `json:"srcPort"`
+	DstPort  string `json:"dstPort"`
 	Protocol string `json:"protocol"`
 }
 
 type Action struct {
-	SrcIP  string `json:"srcIP"`
-	DstIP  string `json:"dstIP"`
-	Policy string `json:"policy"`
+	SrcIP   string `json:"srcIP"`
+	DstIP   string `json:"dstIP"`
+	SrcPort string `json:"srcPort"`
+	DstPort string `json:"dstPort"`
+	Policy  string `json:"policy"`
 }

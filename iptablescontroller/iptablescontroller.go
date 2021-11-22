@@ -2,6 +2,7 @@ package iptablescontroller
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 	"os/exec"
@@ -23,7 +24,7 @@ const (
 	manglePreroutingMarkLanChain iptables.ChainName = "prerouting_mark_lan"
 	manglePreroutingMarkWanChain iptables.ChainName = "prerouting_mark_wan"
 
-	natPreroutingLoadBalanceChain  iptables.ChainName = "prerouting_loadbalancing"
+	NatPreroutingLoadBalanceChain  iptables.ChainName = "prerouting_loadbalancing"
 	natPostroutingLoadBalanceChain iptables.ChainName = "postrouting_loadbalancing"
 	natPreroutingStaticNATChain    iptables.ChainName = "prerouting_staticnat"
 	natPostroutingStaticNATChain   iptables.ChainName = "postrouting_staticnat"
@@ -52,9 +53,9 @@ var (
 		{iptables.TableMangle, mangleCountForwardChain, iptables.ChainForward, "count forward packets", nil},
 	}
 	iptablesNatJumpChains = []iptablesJumpChain{
-		{iptables.TableNAT, natPreroutingStaticNATChain, iptables.ChainPrerouting, "to staticnat chain", nil},
-		{iptables.TableNAT, natPostroutingStaticNATChain, iptables.ChainPostrouting, "to staticnat chain", nil},
-		{iptables.TableNAT, natPostroutingSNATChain, iptables.ChainPostrouting, "to snat chain", nil},
+		// {iptables.TableNAT, natPreroutingStaticNATChain, iptables.ChainPrerouting, "to staticnat chain", nil},
+		// {iptables.TableNAT, natPostroutingStaticNATChain, iptables.ChainPostrouting, "to staticnat chain", nil},
+		// {iptables.TableNAT, natPostroutingSNATChain, iptables.ChainPostrouting, "to snat chain", nil},
 	}
 	iptablesFilterJumpChains = []iptablesJumpChain{}
 )
@@ -84,6 +85,7 @@ type Iptablescontroller struct {
 	fwmark uint32
 	intif  string
 	extif  string
+	ctx    context.Context
 }
 
 func New(intif string, extif string, fwmark uint32, iptables iptables.Interface, minSyncPeriod time.Duration) *Iptablescontroller {
@@ -105,6 +107,7 @@ func New(intif string, extif string, fwmark uint32, iptables iptables.Interface,
 		fwmark:                 fwmark,
 		intif:                  intif,
 		extif:                  extif,
+		ctx:                    context.Background(),
 	}
 
 	if err := c.initialize(); err != nil {
@@ -138,8 +141,11 @@ func (n *Iptablescontroller) initialize() error {
 	}
 
 	initNatJumpChains := []iptablesJumpChain{
-		{iptables.TableNAT, natPreroutingLoadBalanceChain, iptables.ChainPrerouting, "to load balancing chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, NatPreroutingLoadBalanceChain, iptables.ChainPrerouting, "to load balancing chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
 		{iptables.TableNAT, natPostroutingLoadBalanceChain, iptables.ChainPostrouting, "to load balancing chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, natPreroutingStaticNATChain, iptables.ChainPrerouting, "to staticnat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, natPostroutingStaticNATChain, iptables.ChainPostrouting, "to staticnat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, natPostroutingSNATChain, iptables.ChainPostrouting, "to snat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
 	}
 	iptablesNatJumpChains = append(iptablesNatJumpChains, initNatJumpChains...)
 	for _, jump := range iptablesNatJumpChains {
@@ -210,6 +216,71 @@ func (n *Iptablescontroller) initialize() error {
 // 	<-stop
 // 	klog.Info("natrulecontroller run() is done")
 // }
+
+func (n *Iptablescontroller) ensureLBChain(lbRuleKey string, table string, dstChain string, srcChain string) error {
+	jump := iptablesJumpChain{
+		table:     iptables.TableNAT,
+		dstChain:  iptables.ChainName(dstChain),
+		srcChain:  NatPreroutingLoadBalanceChain,
+		comment:   "lbrule:" + lbRuleKey,
+		extraArgs: nil,
+	}
+
+	if _, err := n.iptables.EnsureChain(jump.table, jump.dstChain); err != nil {
+		klog.ErrorS(err, "Failed to ensure chain exists", "table", jump.table, "chain", jump.dstChain)
+		return err
+	}
+	args := append(jump.extraArgs,
+		"-m", "comment", "--comment", jump.comment,
+		"-j", string(jump.dstChain),
+	)
+	if _, err := n.iptables.EnsureRule(iptables.Prepend, jump.table, jump.srcChain, args...); err != nil {
+		klog.ErrorS(err, "Failed to ensure chain jumps", "table", jump.table, "srcChain", jump.srcChain, "dstChain", jump.dstChain)
+		return err
+	}
+	return nil
+}
+
+func (n *Iptablescontroller) deleteLBChain(lbRuleKey string, table string, dstChain string, srcChain string) error {
+	jump := iptablesJumpChain{
+		table:     iptables.TableNAT,
+		dstChain:  iptables.ChainName(dstChain),
+		srcChain:  NatPreroutingLoadBalanceChain,
+		comment:   "lbrule:" + lbRuleKey,
+		extraArgs: nil,
+	}
+
+	args := append(jump.extraArgs,
+		"-m", "comment", "--comment", jump.comment,
+		"-j", string(jump.dstChain),
+	)
+	if err := n.iptables.DeleteRule(jump.table, jump.srcChain, args...); err != nil {
+		klog.ErrorS(err, "Failed to ensure chain jumps", "table", jump.table, "srcChain", jump.srcChain, "dstChain", jump.dstChain)
+		return err
+	}
+
+	if err := n.iptables.DeleteChain(jump.table, jump.dstChain); err != nil {
+		klog.ErrorS(err, "Failed to ensure chain exists", "table", jump.table, "chain", jump.dstChain)
+		return err
+	}
+
+	return nil
+}
+
+func (n *Iptablescontroller) flushLBChain(lbRuleKey string, table string, dstChain string) error {
+	jump := iptablesJumpChain{
+		table:     iptables.TableNAT,
+		dstChain:  iptables.ChainName(dstChain),
+		comment:   "lbrule:" + lbRuleKey,
+		extraArgs: nil,
+	}
+
+	if err := n.iptables.FlushChain(jump.table, jump.dstChain); err != nil {
+		klog.ErrorS(err, "Failed to ensure chain exists", "table", jump.table, "chain", jump.dstChain)
+		return err
+	}
+	return nil
+}
 
 func (n *Iptablescontroller) initMark() error {
 	n.iptablesdata.Reset()
