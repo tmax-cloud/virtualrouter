@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/cho4036/virtualrouter",
+	"ImportPath": "github.com/tmax-cloud/virtualrouter",
 	"GoVersion": "unknown",
 	"GodepVersion": "gen-godeps",
 	"Packages": [

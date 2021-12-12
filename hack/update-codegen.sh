@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
-CODEGEN_PKG=~/go/src/k8s.io/code-generator
+CODEGEN_PKG=~/workspace/k8s.io/code-generator
 # CODEGEN_PKG=${CODEGEN_PKG:-$(cd "${SCRIPT_ROOT}"; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
 
 # generate the code with:
@@ -27,9 +27,9 @@ CODEGEN_PKG=~/go/src/k8s.io/code-generator
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
-  github.com/cho4036/virtualrouter/pkg/client github.com/cho4036/virtualrouter/pkg/apis \
+  github.com/tmax-cloud/virtualrouter/pkg/client github.com/tmax-cloud/virtualrouter/pkg/apis \
   networkcontroller:v1 \
-  --output-base ~/go/src \
+  --output-base ~/workspace \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
 
 # To use your own boilerplate text append:

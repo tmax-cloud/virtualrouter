@@ -19,13 +19,21 @@ limitations under the License.
 package fake
 
 import (
-	v1 "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned/typed/networkcontroller/v1"
+	v1 "github.com/tmax-cloud/virtualrouter/pkg/client/clientset/versioned/typed/networkcontroller/v1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
 
 type FakeTmaxV1 struct {
 	*testing.Fake
+}
+
+func (c *FakeTmaxV1) FireWallRules(namespace string) v1.FireWallRuleInterface {
+	return &FakeFireWallRules{c, namespace}
+}
+
+func (c *FakeTmaxV1) LoadBalancerRules(namespace string) v1.LoadBalancerRuleInterface {
+	return &FakeLoadBalancerRules{c, namespace}
 }
 
 func (c *FakeTmaxV1) NATRules(namespace string) v1.NATRuleInterface {

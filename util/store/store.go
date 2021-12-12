@@ -3,7 +3,7 @@ package store
 import (
 	"fmt"
 
-	"github.com/cho4036/virtualrouter/util/threadsafemap"
+	"github.com/tmax-cloud/virtualrouter/util/threadsafemap"
 )
 
 type Storer interface {

@@ -1,0 +1,72 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: virtualrouter-role
+rules:
+- apiGroups:
+  - "virtualrouter.tmax.hypercloud.com"
+  resources:
+  - '*'
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - "leases"
+  verbs:
+  - '*'
+# - apiGroups:
+#   - policy
+#   resources:
+#   - podsecuritypolicies
+#   resourceNames:
+#   - virtualrouter-psp
+#   verbs:
+#   - use
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: virtualrouter-sa
+  namespace: virtualrouter
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: virtualrouter-rb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: virtualrouter-role
+subjects:
+- kind: ServiceAccount
+  name: virtualrouter-sa
+  namespace: virtualrouter
+---
+
+
+# apiVersion: policy/v1beta1
+# kind: PodSecurityPolicy
+# metadata:
+#   name: virtualrouter-psp
+#   namespace: virtualrouter
+# spec:
+#   allowPrivilegeEscalation: false
+#   allowCapabilities:
+#   - NET_RAW
+#   privileged: true
+#   runAsUser:
+#     rule: RunAsAny
+#   supplementalGroups:
+#     rule: RunAsAny
+#   fsGroup:
+#     rule: RunAsAny
+#   seLinux:
+#       rule: RunAsAny
+---

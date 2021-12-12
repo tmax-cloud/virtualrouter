@@ -21,7 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1 "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller/v1"
+	v1 "github.com/tmax-cloud/virtualrouter/pkg/apis/networkcontroller/v1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -53,6 +53,10 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=tmax.hypercloud.com, Version=v1
+	case v1.SchemeGroupVersion.WithResource("firewallrules"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Tmax().V1().FireWallRules().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("loadbalancerrules"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Tmax().V1().LoadBalancerRules().Informer()}, nil
 	case v1.SchemeGroupVersion.WithResource("natrules"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Tmax().V1().NATRules().Informer()}, nil
 

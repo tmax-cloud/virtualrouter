@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"os"
+	"os/exec"
 	"time"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -28,9 +30,12 @@ import (
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
 	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 
-	clientset "github.com/cho4036/virtualrouter/pkg/client/clientset/versioned"
-	informers "github.com/cho4036/virtualrouter/pkg/client/informers/externalversions"
-	"github.com/cho4036/virtualrouter/pkg/signals"
+	"github.com/tmax-cloud/virtualrouter/executor/iptables"
+	"github.com/tmax-cloud/virtualrouter/iptablescontroller"
+	clientset "github.com/tmax-cloud/virtualrouter/pkg/client/clientset/versioned"
+	informers "github.com/tmax-cloud/virtualrouter/pkg/client/informers/externalversions"
+	"github.com/tmax-cloud/virtualrouter/pkg/signals"
+	"github.com/vishvananda/netlink"
 )
 
 var (
@@ -42,6 +47,23 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 
+	// ToDo: Make it variable not constant
+	var fwmark uint32 = 200
+	// ToDo: Make it variable not constant
+	intif := "ethint"
+	// ToDo: Make it variable not constant
+	extif := "ethext"
+
+	// ToDo: Make it start after interface job done(CNI: intif, extif or signal)
+	for {
+		if _, err := netlink.LinkByName(extif); err == nil {
+			if _, err := netlink.LinkByName(intif); err == nil {
+				break
+			}
+		}
+		time.Sleep(time.Second * 1)
+	}
+
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
@@ -49,6 +71,7 @@ func main() {
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
+	namespace := os.Getenv("POD_NAMESPACE")
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -61,18 +84,27 @@ func main() {
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	nfvInformerFactory := informers.NewSharedInformerFactory(nfvClient, time.Second*30)
+	// nfvInformerFactory := informers.NewSharedInformerFactory(nfvClient, time.Second*30)
+	nfvInformerFactory := informers.NewFilteredSharedInformerFactory(nfvClient, time.Second*30, namespace, nil)
+
+	cmd := exec.Command("sysctl", "-p")
+	if err := cmd.Run(); err != nil {
+		klog.ErrorS(err, "Apply sysctl failed", "command", "sysctl -p")
+		return
+	}
 
 	controller := NewController(kubeClient, nfvClient,
-		kubeInformerFactory.Apps().V1().Deployments(),
-		nfvInformerFactory.Tmax().V1().NATRules())
+		nfvInformerFactory.Tmax().V1().NATRules(),
+		nfvInformerFactory.Tmax().V1().FireWallRules(),
+		nfvInformerFactory.Tmax().V1().LoadBalancerRules(),
+		iptablescontroller.New(intif, extif, fwmark, iptables.NewIPV4(), 10*time.Second))
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.
 	kubeInformerFactory.Start(stopCh)
 	nfvInformerFactory.Start(stopCh)
 
-	if err = controller.Run(2, stopCh); err != nil {
+	if err = controller.Run(1, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
 }

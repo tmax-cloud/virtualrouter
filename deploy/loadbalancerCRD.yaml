@@ -1,0 +1,78 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: loadbalancerrules.virtualrouter.tmax.hypercloud.com
+spec:
+  group: virtualrouter.tmax.hypercloud.com
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              description: 'LoadBalancerRuleSpec contains multiple loadbalancerrules'
+              properties:
+                rules:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      loadBalancerIP:
+                        description: VIP for LoadBalancer
+                        type: string
+                      loadBalancerPort:
+                        description: VIP for LoadBalancer
+                        type: integer
+                        maximum: 65535
+                      backends:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            backendIP: 
+                              description: Backend Target IP
+                              type: string
+                            backendPort: 
+                              description: Backend Target Port
+                              type: integer
+                              maximum: 65535
+                            healthcheckIP: 
+                              description: Backend healthcheckIP
+                              type: string
+                            healthcheckPort: 
+                              description: Backend healthcheckPort
+                              type: integer
+                              maximum: 65535
+                            weight:
+                              description: Weight for Target
+                              type: integer
+                              minimum: 1
+                              maximum: 100
+                            healthcheckMethod:
+                              description: Healthcheck Method(none,icmp,tcp). if none, no healthcheck. if icmp, use ping. if tcp, use handshake.
+                              type: string
+                              pattern: ^(none|icmp|tcp)
+                          required:
+                          - backendIP
+                          - weight
+                          - healthcheckMethod
+                    required:
+                    - loadBalancerIP
+              required:
+              - rules
+            status:
+              type: object
+      subresources:
+        status: {}
+  names:
+    kind: LoadBalancerRule
+    listKind: LoadBalancerRuleList
+    plural: loadbalancerrules
+    singular: loadbalancerrule
+    shortNames:
+    - lb
+  scope: Namespaced

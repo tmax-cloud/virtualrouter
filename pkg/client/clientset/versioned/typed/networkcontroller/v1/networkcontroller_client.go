@@ -19,19 +19,29 @@ limitations under the License.
 package v1
 
 import (
-	v1 "github.com/cho4036/virtualrouter/pkg/apis/networkcontroller/v1"
-	"github.com/cho4036/virtualrouter/pkg/client/clientset/versioned/scheme"
+	v1 "github.com/tmax-cloud/virtualrouter/pkg/apis/networkcontroller/v1"
+	"github.com/tmax-cloud/virtualrouter/pkg/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
 type TmaxV1Interface interface {
 	RESTClient() rest.Interface
+	FireWallRulesGetter
+	LoadBalancerRulesGetter
 	NATRulesGetter
 }
 
 // TmaxV1Client is used to interact with features provided by the tmax.hypercloud.com group.
 type TmaxV1Client struct {
 	restClient rest.Interface
+}
+
+func (c *TmaxV1Client) FireWallRules(namespace string) FireWallRuleInterface {
+	return newFireWallRules(c, namespace)
+}
+
+func (c *TmaxV1Client) LoadBalancerRules(namespace string) LoadBalancerRuleInterface {
+	return newLoadBalancerRules(c, namespace)
 }
 
 func (c *TmaxV1Client) NATRules(namespace string) NATRuleInterface {

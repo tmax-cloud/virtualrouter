@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: virtualrouter1
+  namespace: virtualrouter
+spec:
+  serviceAccount: virtualrouter-sa
+  containers:
+  - name: virtualrouter
+    image: 10.0.0.4:5000/virtualrouter:0.0.1
+    imagePullPolicy: Always
+    securityContext:
+      capabilities:
+        add:
+          - NET_RAW
+      privileged: true

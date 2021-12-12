@@ -1,5 +1,5 @@
 package networkcontroller
 
 const (
-	GroupName = "tmax.hypercloud.com"
+	GroupName = "virtualrouter.tmax.hypercloud.com"
 )
