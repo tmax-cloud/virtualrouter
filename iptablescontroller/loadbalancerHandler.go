@@ -465,237 +465,10 @@ const (
 	MODIFIEDCOMMAND COMMAND          = 2
 )
 
-// ToDo: Define Error type
-
-// var (
-// 	lbRules           map[string]*map[string]*v1.Backend
-// 	backends          map[string]*v1.Backend
-// 	healthcheckerList map[string]*healthCheckerInstance
-// )
-
 type healthCheckerInstance struct {
 	runner healthchecker.HealthChecker
 	stopCh chan struct{}
 }
-
-// func (n *Iptablescontroller) OnLoadbalanceAdd2(originLoadbalancerrule *v1.LoadBalancerRule) error {
-// 	n.mu.Lock()
-// 	defer n.mu.Unlock()
-
-// 	if validationCheck(originLoadbalancerrule) == INVALIDE {
-// 		return fmt.Errorf("LB Rule is invalid")
-// 	}
-
-// 	loadbalancerrule := originLoadbalancerrule.DeepCopy()
-
-// 	////
-// 	// lbRuleKey := loadbalancerrule.GetNamespace() + loadbalancerrule.GetName()
-// 	// if _, exist := lbRules[lbRuleKey]; exist {
-// 	// 	return fmt.Errorf("already exist %s", lbRuleKey)
-// 	// }
-
-// 	// for _, rules := range loadbalancerrule.Spec.Rules {
-// 	// 	// b := make(map[string]*v1.Backend)
-// 	// 	rulesKey := rules.LoadBalancerIP
-// 	// 	lbRules[rulesKey] = &map[string]*v1.Backend{}
-// 	// 	for _, backend := range rules.Backends {
-// 	// 		port, err := strconv.Atoi(backend.BackendPort)
-// 	// 		if err != nil {
-// 	// 			return err
-// 	// 		}
-// 	// 		backendsKey := healthchecker.GenerateEndpointKey(net.IP(backend.BackendIP), port)
-// 	// 		backends[backendsKey] = &backend
-// 	// 		lbRules[rulesKey] = append(lbRules[rulesKey])
-// 	// 	}
-
-// 	// }
-// 	// lbRules[lbRuleKey] = append(lbRules[lbRuleKey])
-
-// 	////
-
-// 	n.iptablesdata.Reset()
-
-// 	n.iptables.SaveInto(iptables.TableNAT, n.iptablesdata)
-// 	lines := strings.Split(n.iptablesdata.String(), "\n")
-
-// 	lines = lines[1 : len(lines)-3] // remove tails with COMMIT
-
-// 	key := loadbalancerrule.GetNamespace() + loadbalancerrule.GetName()
-// 	var chainName string
-// 	oldLBRules, ok := n.loadbalancerruleMap[key]
-// 	if ok {
-// 		//n.natruleSynced = false
-// 		oldRules := transLBRule2Rule(oldLBRules)
-// 		klog.Warningf("Duplicated key(%s) detected During LoadbalanceAdd Event. Going to overwrite rule : %+v to %+v", key, oldRules, loadbalancerrule)
-// 		for _, rule := range oldRules {
-// 			chainName = string(NatPreroutingLoadBalanceChain)
-// 			n.removeRule(rule, chainName, &lines, rule.Args...)
-// 			if err := delRouteForProxyARP(rule.Match.DstIP); err != nil {
-// 				klog.ErrorS(err, "delRouteForProxyARP")
-// 				return err
-// 			}
-// 		}
-// 	}
-
-// 	rules := transLBRule2Rule(*loadbalancerrule)
-// 	for _, rule := range rules {
-// 		chainName = string(NatPreroutingLoadBalanceChain)
-// 		n.appendRule(rule, chainName, &lines, rule.Args...)
-// 	}
-
-// 	lines = append(lines, "COMMIT")
-// 	n.iptablesdata.Reset()
-// 	writeLine(n.iptablesdata, lines...)
-// 	klog.Infof("Deploying rules : %s", n.iptablesdata.String())
-// 	if err := n.iptables.Restore("nat", n.iptablesdata.Bytes(), true, true); err != nil {
-// 		klog.Error(err)
-// 		return err
-// 	}
-
-// 	for i := range rules {
-// 		if err := setRouteForProxyARP(rules[i].Match.DstIP); err != nil {
-// 			klog.ErrorS(err, "setRouteForProxyARP")
-// 			return err
-// 		}
-// 	}
-
-// 	n.loadbalancerruleMap[key] = *loadbalancerrule
-
-// 	for _, rule := range loadbalancerrule.Spec.Rules {
-
-// 		key := rule.LoadBalancerIP
-// 		h := healthchecker.NewHealthChecker(&healthchecker.Config{Interval: healthchecker.DEFAULT_INTERVAL, Timeout: healthchecker.DEFAULT_TIMEOUT})
-// 		stopCh := make(chan struct{})
-// 		go h.Run(stopCh)
-// 		for _, target := range rule.Backends {
-// 			h.EnsureTarget(key, net.IP(target.BackendIP), target.HealthCheckPort, healthchecker.METHOD(target.HealthCheckMethod))
-// 		}
-// 		// healthcheckerList[key] =
-// 		healthcheckerList[key] = &healthCheckerInstance{
-// 			runner: h,
-// 			stopCh: stopCh,
-// 		}
-// 	}
-
-// 	return nil
-// }
-
-// func (n *Iptablescontroller) OnLoadbalanceDelete2(originLoadbalancerrule *v1.LoadBalancerRule) error {
-// 	n.mu.Lock()
-// 	defer n.mu.Unlock()
-// 	loadbalancerrule := originLoadbalancerrule.DeepCopy()
-
-// 	n.iptablesdata.Reset()
-
-// 	n.iptables.SaveInto(iptables.TableNAT, n.iptablesdata)
-// 	lines := strings.Split(n.iptablesdata.String(), "\n")
-
-// 	lines = lines[1 : len(lines)-3] // remove tails with COMMIT
-
-// 	key := loadbalancerrule.GetNamespace() + loadbalancerrule.GetName()
-// 	val, ok := n.loadbalancerruleMap[key]
-// 	if !ok {
-// 		// n.natruleSynced = false
-// 		klog.Warningf("Deleting empty value on key(%s) detected During OnLoadbalanceDelete Event", key)
-// 		return nil
-// 	}
-
-// 	var chainName string
-// 	oldRules := transLBRule2Rule(val)
-// 	for _, rule := range oldRules {
-// 		chainName = string(NatPreroutingLoadBalanceChain)
-// 		n.removeRule(rule, chainName, &lines, rule.Args...)
-// 	}
-
-// 	lines = append(lines, "COMMIT")
-// 	n.iptablesdata.Reset()
-// 	writeLine(n.iptablesdata, lines...)
-// 	klog.Infof("Deploying rules : %s", n.iptablesdata.String())
-// 	if err := n.iptables.Restore("nat", n.iptablesdata.Bytes(), true, true); err != nil {
-// 		klog.Error(err)
-// 		return err
-// 	}
-
-// 	for _, rule := range oldRules {
-// 		if err := delRouteForProxyARP(rule.Match.DstIP); err != nil {
-// 			klog.ErrorS(err, "delRouteForProxyARP")
-// 			return err
-// 		}
-// 	}
-
-// 	for _, rule := range n.loadbalancerruleMap[key].Spec.Rules {
-// 		key := rule.LoadBalancerIP
-// 		healthcheckerList[key].stopCh <- struct{}{}
-// 	}
-
-// 	delete(n.loadbalancerruleMap, key)
-// 	return nil
-// }
-
-// func (n *Iptablescontroller) OnLoadbalanceUpdate2(originLoadbalancerrule *v1.LoadBalancerRule) error {
-// 	n.mu.Lock()
-// 	defer n.mu.Unlock()
-// 	loadbalancerrule := originLoadbalancerrule.DeepCopy()
-
-// 	n.iptablesdata.Reset()
-
-// 	n.iptables.SaveInto(iptables.TableNAT, n.iptablesdata)
-// 	lines := strings.Split(n.iptablesdata.String(), "\n")
-
-// 	lines = lines[1 : len(lines)-3] // remove tails with COMMIT
-
-// 	key := loadbalancerrule.GetNamespace() + loadbalancerrule.GetName()
-// 	// for k, v := range n.natruleMap {
-// 	// 	klog.Infof("key: %s, value: %+v", k, v)
-// 	// }
-
-// 	var chainName string
-// 	var oldRules []*v1.Rules
-// 	val, ok := n.loadbalancerruleMap[key]
-// 	if !ok {
-// 		n.loadbalancerruleSynced = false
-// 		klog.Warningf("Updating empty value on key(%s) detected During OnLoadbalanceUpdate Event", key)
-// 	} else {
-// 		oldRules := transLBRule2Rule(val)
-// 		for _, rule := range oldRules {
-// 			chainName = string(NatPreroutingLoadBalanceChain)
-// 			n.removeRule(rule, chainName, &lines, rule.Args...)
-// 		}
-// 		delete(n.loadbalancerruleMap, key)
-// 	}
-
-// 	rules := transLBRule2Rule(*loadbalancerrule)
-// 	for _, rule := range rules {
-// 		chainName = string(NatPreroutingLoadBalanceChain)
-// 		n.appendRule(rule, chainName, &lines, rule.Args...)
-// 	}
-
-// 	for _, rule := range oldRules {
-// 		if err := delRouteForProxyARP(rule.Match.DstIP); err != nil {
-// 			klog.ErrorS(err, "delRouteForProxyARP")
-// 			return err
-// 		}
-// 	}
-// 	for _, rule := range rules {
-// 		if err := setRouteForProxyARP(rule.Match.DstIP); err != nil {
-// 			klog.ErrorS(err, "delRouteForProxyARP")
-// 			return err
-// 		}
-// 	}
-
-// 	lines = append(lines, "COMMIT")
-// 	n.iptablesdata.Reset()
-// 	writeLine(n.iptablesdata, lines...)
-
-// 	klog.Infof("Deploying rules : %s", n.iptablesdata.String())
-// 	if err := n.iptables.Restore("nat", n.iptablesdata.Bytes(), true, true); err != nil {
-// 		klog.Error(err)
-// 		return err
-// 	}
-
-// 	n.loadbalancerruleMap[key] = *loadbalancerrule
-// 	return nil
-// }
 
 func transRule(lbRuleInstance *lbRule) []*v1.Rules {
 	var rules []*v1.Rules
@@ -724,11 +497,11 @@ func transRule(lbRuleInstance *lbRule) []*v1.Rules {
 			rule = &v1.Rules{
 				Match: v1.Match{
 					DstIP:   lbRuleInstance.lbVirtualIP,
-					DstPort: strconv.Itoa(lbRuleInstance.lbVirtualPort),
+					DstPort: lbRuleInstance.lbVirtualPort,
 				},
 				Action: v1.Action{
 					DstIP:   endpointMap[endpointKey].endpointIP,
-					DstPort: strconv.Itoa(endpointMap[endpointKey].endpointPort),
+					DstPort: endpointMap[endpointKey].endpointPort,
 				},
 				Args: []string{
 					// "-m statistic --mode random --probability " + strconv.FormatFloat(weight, 'e', -1, 64),
@@ -742,34 +515,6 @@ func transRule(lbRuleInstance *lbRule) []*v1.Rules {
 
 	return rules
 }
-
-// func transLBRule2Rule(lbrule v1.LoadBalancerRule) []*v1.Rules {
-// 	var rules []*v1.Rules
-
-// 	for _, lbObj := range lbrule.Spec.Rules {
-// 		sort.Sort(lbObj.Backends)
-// 		for _, backend := range lbObj.Backends {
-// 			weight := float64(backend.Weight) * 0.01
-// 			rule := &v1.Rules{
-// 				Match: v1.Match{
-// 					DstIP:   lbObj.LoadBalancerIP,
-// 					DstPort: strconv.Itoa(lbObj.LoadBalancerPort),
-// 				},
-// 				Action: v1.Action{
-// 					DstIP:   backend.BackendIP,
-// 					DstPort: strconv.Itoa(backend.BackendPort),
-// 				},
-// 				Args: []string{
-// 					// "-m statistic --mode random --probability " + strconv.FormatFloat(weight, 'e', -1, 64),
-// 					"-m statistic --mode random --probability " + fmt.Sprintf("%.2f", weight),
-// 				},
-// 			}
-// 			rules = append(rules, rule)
-// 		}
-// 	}
-
-// 	return rules
-// }
 
 func validationCheck(lbRule *v1.LoadBalancerRule) LBRULEVALIDATION {
 	// validate lbRule instance

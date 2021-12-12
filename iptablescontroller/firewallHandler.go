@@ -1,6 +1,7 @@
 package iptablescontroller
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/tmax-cloud/virtualrouter/executor/iptables"
@@ -8,7 +9,18 @@ import (
 	"k8s.io/klog/v2"
 )
 
+type FWRULEVALIDATION bool
+
+const (
+	FWRULE_INVALIDE FWRULEVALIDATION = false
+	FWRULE_VALID    FWRULEVALIDATION = true
+)
+
 func (n *Iptablescontroller) OnFirewallAdd(firewallrule *v1.FireWallRule) error {
+	if fwruleValidationCheck(firewallrule) == FWRULE_INVALIDE {
+		return fmt.Errorf("FW Rule is invalid")
+	}
+
 	n.mu.Lock()
 	klog.Info("onAdd Called")
 	defer n.mu.Unlock()
@@ -89,6 +101,10 @@ func (n *Iptablescontroller) OnFirewallDelete(firewallrule *v1.FireWallRule) err
 }
 
 func (n *Iptablescontroller) OnFirewallUpdate(firewallrule *v1.FireWallRule) error {
+	if fwruleValidationCheck(firewallrule) == FWRULE_INVALIDE {
+		return fmt.Errorf("FW Rule is invalid")
+	}
+
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	klog.Info("onUpdate Called")
@@ -134,4 +150,20 @@ func (n *Iptablescontroller) OnFirewallUpdate(firewallrule *v1.FireWallRule) err
 
 	n.firewallruleMap[key] = *firewallrule
 	return nil
+}
+
+func fwruleValidationCheck(fwRule *v1.FireWallRule) FWRULEVALIDATION {
+	// validate natRule instance
+	for _, rule := range fwRule.Spec.Rules {
+		if rule.Match.DstPort != 0 || rule.Match.SrcPort != 0 {
+			if rule.Match.Protocol == "" || rule.Match.Protocol == PROTOCOL_ALL {
+				return FWRULE_INVALIDE
+			}
+		}
+		if rule.Match.DstPort < 0 || rule.Match.DstPort > 65535 || rule.Match.SrcPort < 0 || rule.Match.SrcPort > 65535 {
+			return FWRULE_INVALIDE
+		}
+	}
+
+	return FWRULE_VALID
 }
