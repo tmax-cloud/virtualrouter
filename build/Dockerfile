@@ -15,6 +15,7 @@ RUN echo 'net.ipv4.tcp_fwmark_accept=1' >> /etc/sysctl.conf
 RUN echo 'net.ipv4.fwmark_reflect=1' >> /etc/sysctl.conf
 RUN echo 'net.ipv4.conf.all.proxy_arp=1' >> /etc/sysctl.conf
 RUN echo 'net.ipv4.conf.default.proxy_arp=1' >> /etc/sysctl.conf
+RUN echo 'net.ipv4.conf.default.rp_filter=2' >> /etc/sysctl.conf
 
 RUN chmod a+x /virtualrouter
 
