@@ -28,8 +28,13 @@ spec:
                             type: string
                           dstIP:
                             type: string
+                          srcPort:
+                            type: integer
+                          dstPort:
+                            type: integer  
                           protocol:
                             type: string
+                            pattern: ^(all|udp|tcp)
                       action:
                         type: object
                         properties:

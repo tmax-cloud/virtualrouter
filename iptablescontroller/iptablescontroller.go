@@ -37,6 +37,10 @@ const (
 	// ToDo: make filter based on interface
 	// filterForwardFromLanChain iptables.ChainName = "forward_lan_to_wan"
 	// filterForwardFromWanChain iptables.ChainName = "forward_wan_to_lan"
+	PROTOCOL_TCP  string = "tcp"
+	PROTOCOL_ALL  string = "all"
+	PROTOCOL_UDP  string = "udp"
+	PROTOCOL_ICMP string = "icmp"
 )
 
 type iptablesJumpChain struct {

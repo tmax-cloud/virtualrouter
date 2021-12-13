@@ -2,13 +2,14 @@ apiVersion: virtualrouter.tmax.hypercloud.com/v1
 kind: FireWallRule
 metadata:
   name: testfw
-  namespace: virtualrouter
+  namespace: virtualrouter1
 spec:
   rules:
   - match:
       srcIP: 10.10.10.0/24
       dstIP: 192.168.9.31/32
-      protocol: all
+      dstPort: 5555
+      protocol: tcp
     action:
       policy: ACCEPT
   - match:
@@ -17,6 +18,19 @@ spec:
       protocol: all
     action:
       policy: ACCEPT
-
+  - match:
+      srcIP: 10.10.10.0/24
+      dstIP: 192.168.9.31/32
+      srcPort: 5555
+      protocol: tcp
+    action:
+      policy: ACCEPT
+  - match:
+      srcIP: 10.10.10.0/24
+      dstIP: 192.168.9.31/32
+      srcPort: 5555
+      protocol: udp
+    action:
+      policy: ACCEPT
     
     
