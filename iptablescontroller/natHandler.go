@@ -1,6 +1,7 @@
 package iptablescontroller
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/tmax-cloud/virtualrouter/executor/iptables"
@@ -8,7 +9,18 @@ import (
 	"k8s.io/klog/v2"
 )
 
+type NATRULEVALIDATION bool
+
+const (
+	NATRULE_INVALIDE NATRULEVALIDATION = false
+	NATRULE_VALID    NATRULEVALIDATION = true
+)
+
 func (n *Iptablescontroller) OnNATAdd(natrule *v1.NATRule) error {
+	if natruleValidationCheck(natrule) == NATRULE_INVALIDE {
+		return fmt.Errorf("NAT Rule is invalid")
+	}
+
 	n.mu.Lock()
 	klog.Info("onAdd Called")
 	defer n.mu.Unlock()
@@ -131,6 +143,10 @@ func (n *Iptablescontroller) OnNATDelete(natrule *v1.NATRule) error {
 }
 
 func (n *Iptablescontroller) OnNATUpdate(natrule *v1.NATRule) error {
+	if natruleValidationCheck(natrule) == NATRULE_INVALIDE {
+		return fmt.Errorf("NAT Rule is invalid")
+	}
+
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	klog.Info("onUpdate Called")
@@ -204,4 +220,25 @@ func (n *Iptablescontroller) OnNATUpdate(natrule *v1.NATRule) error {
 
 	n.natruleMap[key] = *natrule
 	return nil
+}
+
+func natruleValidationCheck(natRule *v1.NATRule) NATRULEVALIDATION {
+	// validate natRule instance
+	for _, rule := range natRule.Spec.Rules {
+		if rule.Match.DstPort != 0 || rule.Match.SrcPort != 0 {
+			if rule.Match.Protocol == "" {
+				return NATRULE_INVALIDE
+			}
+		}
+
+		if rule.Match.DstPort < 0 || rule.Match.DstPort > 65535 || rule.Match.SrcPort < 0 || rule.Match.SrcPort > 65535 {
+			return NATRULE_INVALIDE
+		}
+
+		if rule.Action.DstPort < 0 || rule.Action.DstPort > 65535 || rule.Action.SrcPort < 0 || rule.Action.SrcPort > 65535 {
+			return NATRULE_INVALIDE
+		}
+	}
+
+	return NATRULE_VALID
 }

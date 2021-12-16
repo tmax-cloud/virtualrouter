@@ -2,6 +2,7 @@ package iptables
 
 import (
 	"bytes"
+	"strconv"
 
 	v1 "github.com/tmax-cloud/virtualrouter/pkg/apis/networkcontroller/v1"
 )
@@ -85,6 +86,12 @@ func match2string(m v1.Match, buffer *bytes.Buffer) {
 	if m.Protocol != "" {
 		buffer.WriteString(" -p " + m.Protocol)
 	}
+	if m.DstPort != 0 {
+		buffer.WriteString(" --dport " + strconv.Itoa(m.DstPort))
+	}
+	if m.SrcPort != 0 {
+		buffer.WriteString(" --sport " + strconv.Itoa(m.SrcPort))
+	}
 }
 
 func policyAction2string(a v1.Action, buffer *bytes.Buffer) {
@@ -92,7 +99,11 @@ func policyAction2string(a v1.Action, buffer *bytes.Buffer) {
 }
 
 func dnatAction2string(a v1.Action, buffer *bytes.Buffer) {
-	writeLine(buffer, " -j", "DNAT", "--to-destination", a.DstIP)
+	var destination string = a.DstIP
+	if a.DstPort != 0 {
+		destination += ":" + strconv.Itoa(a.DstPort)
+	}
+	writeLine(buffer, " -j", "DNAT", "--to-destination", destination)
 }
 
 func snatAction2string(a v1.Action, buffer *bytes.Buffer) {
@@ -100,7 +111,11 @@ func snatAction2string(a v1.Action, buffer *bytes.Buffer) {
 		writeLine(buffer, " -j", "MASQUERADE", "--random-fully")
 		return
 	}
-	writeLine(buffer, " -j", "SNAT", "--to-source", a.SrcIP)
+	var source string = a.SrcIP
+	if a.SrcPort != 0 {
+		source += ":" + strconv.Itoa(a.SrcPort)
+	}
+	writeLine(buffer, " -j", "SNAT", "--to-source", source)
 }
 
 func writeLine(buf *bytes.Buffer, words ...string) {

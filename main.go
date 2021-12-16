@@ -24,7 +24,7 @@ import (
 
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
@@ -44,6 +44,12 @@ var (
 )
 
 func main() {
+	// namespace := os.Getenv("POD_NAMESPACE")
+	namespace := flag.String("POD_NAMESPACE", os.Getenv("POD_NAMESPACE"), "The NAMESPACE of this pod")
+	if namespace == nil {
+		klog.Fatalf("Error namespace is empty")
+	}
+
 	klog.InitFlags(nil)
 	flag.Parse()
 
@@ -64,14 +70,12 @@ func main() {
 		time.Sleep(time.Second * 1)
 	}
 
-	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
-	namespace := os.Getenv("POD_NAMESPACE")
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -84,8 +88,7 @@ func main() {
 	}
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
-	// nfvInformerFactory := informers.NewSharedInformerFactory(nfvClient, time.Second*30)
-	nfvInformerFactory := informers.NewFilteredSharedInformerFactory(nfvClient, time.Second*30, namespace, nil)
+	nfvInformerFactory := informers.NewFilteredSharedInformerFactory(nfvClient, time.Second*30, *namespace, nil)
 
 	cmd := exec.Command("sysctl", "-p")
 	if err := cmd.Run(); err != nil {
@@ -107,9 +110,4 @@ func main() {
 	if err = controller.Run(1, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
-}
-
-func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 }

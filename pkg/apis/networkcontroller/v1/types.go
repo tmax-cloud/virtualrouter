@@ -143,15 +143,15 @@ type Backend struct {
 type Match struct {
 	SrcIP    string `json:"srcIP"`
 	DstIP    string `json:"dstIP"`
-	SrcPort  string `json:"srcPort"`
-	DstPort  string `json:"dstPort"`
+	SrcPort  int    `json:"srcPort"`
+	DstPort  int    `json:"dstPort"`
 	Protocol string `json:"protocol"`
 }
 
 type Action struct {
 	SrcIP   string `json:"srcIP"`
 	DstIP   string `json:"dstIP"`
-	SrcPort string `json:"srcPort"`
-	DstPort string `json:"dstPort"`
+	SrcPort int    `json:"srcPort"`
+	DstPort int    `json:"dstPort"`
 	Policy  string `json:"policy"`
 }
