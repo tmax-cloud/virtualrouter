@@ -1,0 +1,96 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  name: vpns.network.tmaxanc.com
+spec:
+  group: network.tmaxanc.com
+  names:
+    kind: VPN
+    listKind: VPNList
+    plural: vpns
+    singular: vpn
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: VPN is the Schema for the vpns API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VPNSpec defines the desired state of VPN
+            properties:
+              connections:
+                description: Connections defines VPN connection informations
+                items:
+                  properties:
+                    also:
+                      type: string
+                    esp:
+                      type: string
+                    ike:
+                      type: string
+                    ikelifetime:
+                      type: string
+                    isservicesubnet:
+                      type: boolean
+                    keyexchange:
+                      type: string
+                    left:
+                      type: string
+                    leftid:
+                      type: string
+                    leftsubnet:
+                      type: string
+                    lifetime:
+                      type: string
+                    name:
+                      type: string
+                    psk:
+                      type: string
+                    right:
+                      type: string
+                    rightid:
+                      type: string
+                    rightsubnet:
+                      type: string
+                  required:
+                  - left
+                  - leftsubnet
+                  - name
+                  - psk
+                  - right
+                  - rightsubnet
+                  type: object
+                type: array
+              nodename:
+                type: string
+            type: object
+          status:
+            description: VPNStatus defines the observed state of VPN
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

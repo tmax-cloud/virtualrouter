@@ -34,6 +34,11 @@ import (
 	"github.com/tmax-cloud/virtualrouter/iptablescontroller"
 	clientset "github.com/tmax-cloud/virtualrouter/pkg/client/clientset/versioned"
 	informers "github.com/tmax-cloud/virtualrouter/pkg/client/informers/externalversions"
+
+	vpncontroller "github.com/tmax-cloud/virtualrouter/pkg/controller/vpn"
+	networkclientset "github.com/tmax-cloud/virtualrouter/pkg/generated/clientset/versioned"
+	networkinformers "github.com/tmax-cloud/virtualrouter/pkg/generated/informers/externalversions"
+
 	"github.com/tmax-cloud/virtualrouter/pkg/signals"
 	"github.com/vishvananda/netlink"
 )
@@ -44,6 +49,11 @@ var (
 )
 
 func main() {
+	cmd := exec.Command("/usr/sbin/ipsec", "start", "--nofork")
+	if err := cmd.Run(); err != nil {
+		klog.Fatalf("error starting strongswan: %v", err)
+	}
+
 	// namespace := os.Getenv("POD_NAMESPACE")
 	namespace := flag.String("POD_NAMESPACE", os.Getenv("POD_NAMESPACE"), "The NAMESPACE of this pod")
 	if namespace == nil {
@@ -87,10 +97,16 @@ func main() {
 		klog.Fatalf("Error building example clientset: %s", err.Error())
 	}
 
+	networkClient, err := networkclientset.NewForConfig(cfg)
+	if err != nil {
+		klog.Fatalf("error building network custom clientset: %s", err.Error())
+	}
+
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	nfvInformerFactory := informers.NewFilteredSharedInformerFactory(nfvClient, time.Second*30, *namespace, nil)
+	networkInformerFactory := networkinformers.NewSharedInformerFactory(networkClient, 1800*time.Second)
 
-	cmd := exec.Command("sysctl", "-p")
+	cmd = exec.Command("sysctl", "-p")
 	if err := cmd.Run(); err != nil {
 		klog.ErrorS(err, "Apply sysctl failed", "command", "sysctl -p")
 		return
@@ -102,10 +118,16 @@ func main() {
 		nfvInformerFactory.Tmax().V1().LoadBalancerRules(),
 		iptablescontroller.New(intif, extif, fwmark, iptables.NewIPV4(), 10*time.Second))
 
+	vpnController := vpncontroller.NewVPNController(kubeClient, networkClient,
+		networkInformerFactory.Network().V1alpha1().VPNs())
+
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.
 	kubeInformerFactory.Start(stopCh)
 	nfvInformerFactory.Start(stopCh)
+	networkInformerFactory.Start(stopCh)
+
+	go vpnController.Run(1, stopCh)
 
 	if err = controller.Run(1, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
