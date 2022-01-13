@@ -50,7 +50,7 @@ var (
 
 func main() {
 	cmd := exec.Command("/usr/sbin/ipsec", "start", "--nofork")
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
 		klog.Fatalf("error starting strongswan: %v", err)
 	}
 
@@ -104,7 +104,7 @@ func main() {
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	nfvInformerFactory := informers.NewFilteredSharedInformerFactory(nfvClient, time.Second*30, *namespace, nil)
-	networkInformerFactory := networkinformers.NewSharedInformerFactory(networkClient, 1800*time.Second)
+	networkInformerFactory := networkinformers.NewFilteredSharedInformerFactory(networkClient, 1800*time.Second, *namespace, nil)
 
 	cmd = exec.Command("sysctl", "-p")
 	if err := cmd.Run(); err != nil {
