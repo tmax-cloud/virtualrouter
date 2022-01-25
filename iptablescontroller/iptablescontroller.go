@@ -12,23 +12,27 @@ import (
 	"time"
 
 	"github.com/tmax-cloud/virtualrouter/executor/iptables"
+	networkv1alpha1 "github.com/tmax-cloud/virtualrouter/pkg/apis/network/v1alpha1"
 	v1 "github.com/tmax-cloud/virtualrouter/pkg/apis/networkcontroller/v1"
 	"github.com/vishvananda/netlink"
 	"k8s.io/klog/v2"
 )
 
 const (
-	mangleCountForwardChain      iptables.ChainName = "count_forward"
-	mangleCountLanChain          iptables.ChainName = "count_lan"
-	mangleCountWanChain          iptables.ChainName = "count_wan"
-	manglePreroutingMarkLanChain iptables.ChainName = "prerouting_mark_lan"
-	manglePreroutingMarkWanChain iptables.ChainName = "prerouting_mark_wan"
+	mangleCountForwardChain       iptables.ChainName = "count_forward"
+	mangleCountLanChain           iptables.ChainName = "count_lan"
+	mangleCountWanChain           iptables.ChainName = "count_wan"
+	manglePreroutingMarkLanChain  iptables.ChainName = "prerouting_mark_lan"
+	manglePreroutingMarkWanChain  iptables.ChainName = "prerouting_mark_wan"
+	manglePostroutingMarkVPNChain iptables.ChainName = "postrouting_mark_vpn"
+	mangleOutputMarkVPNChain      iptables.ChainName = "output_mark_vpn"
 
 	NatPreroutingLoadBalanceChain  iptables.ChainName = "prerouting_loadbalancing"
 	natPostroutingLoadBalanceChain iptables.ChainName = "postrouting_loadbalancing"
 	natPreroutingStaticNATChain    iptables.ChainName = "prerouting_staticnat"
 	natPostroutingStaticNATChain   iptables.ChainName = "postrouting_staticnat"
 	natPostroutingSNATChain        iptables.ChainName = "postrouting_snat"
+	natPostroutingVPNChain         iptables.ChainName = "postrouting_vpn"
 
 	filterCountLanChain iptables.ChainName = "count_lan"
 	filterCountWanChain iptables.ChainName = "count_wan"
@@ -71,6 +75,7 @@ type Iptablescontroller struct {
 	natruleMap          map[string]v1.NATRule
 	firewallruleMap     map[string]v1.FireWallRule
 	loadbalancerruleMap map[string]v1.LoadBalancerRule
+	vpnMap              map[string]networkv1alpha1.VPN
 
 	natruleSynced          bool
 	firewallruleSynced     bool
@@ -98,6 +103,7 @@ func New(intif string, extif string, fwmark uint32, iptables iptables.Interface,
 		natruleMap:             make(map[string]v1.NATRule),
 		firewallruleMap:        make(map[string]v1.FireWallRule),
 		loadbalancerruleMap:    make(map[string]v1.LoadBalancerRule),
+		vpnMap:                 make(map[string]networkv1alpha1.VPN),
 		natruleSynced:          false,
 		firewallruleSynced:     false,
 		loadbalancerruleSynced: false,
@@ -127,6 +133,10 @@ func (n *Iptablescontroller) initialize() error {
 		{iptables.TableMangle, mangleCountWanChain, iptables.ChainPrerouting, "count wan packets", []string{"-i", n.extif}},
 		{iptables.TableMangle, manglePreroutingMarkLanChain, iptables.ChainPrerouting, "mark new conn for lan", []string{"-i", n.intif, "-m", "conntrack", "--ctstate", "NEW"}},
 		{iptables.TableMangle, manglePreroutingMarkWanChain, iptables.ChainPrerouting, "mark new conn for wan", []string{"-i", n.extif, "-m", "conntrack", "--ctstate", "NEW"}},
+		{iptables.TableMangle, mangleOutputMarkVPNChain, iptables.ChainOutput, "mark outbound vpn traffic", []string{"-p", PROTOCOL_UDP, "--sport", "500", "--dport", "500"}},
+		{iptables.TableMangle, mangleOutputMarkVPNChain, iptables.ChainOutput, "mark outbound vpn traffic", []string{"-p", PROTOCOL_UDP, "--sport", "4500", "--dport", "4500"}},
+		{iptables.TableMangle, manglePostroutingMarkVPNChain, iptables.ChainPostrouting, "mark outbound vpn traffic", []string{"-p", PROTOCOL_UDP, "--sport", "500", "--dport", "500"}},
+		{iptables.TableMangle, manglePostroutingMarkVPNChain, iptables.ChainPostrouting, "mark outbound vpn traffic", []string{"-p", PROTOCOL_UDP, "--sport", "4500", "--dport", "4500"}},
 	}
 	iptablesMangleJumpChains = append(iptablesMangleJumpChains, initMangleJumpChains...)
 	for _, jump := range iptablesMangleJumpChains {
@@ -150,6 +160,7 @@ func (n *Iptablescontroller) initialize() error {
 		{iptables.TableNAT, natPreroutingStaticNATChain, iptables.ChainPrerouting, "to staticnat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
 		{iptables.TableNAT, natPostroutingStaticNATChain, iptables.ChainPostrouting, "to staticnat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
 		{iptables.TableNAT, natPostroutingSNATChain, iptables.ChainPostrouting, "to snat chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
+		{iptables.TableNAT, natPostroutingVPNChain, iptables.ChainPostrouting, "to vpn chain", []string{"-m", "mark", "--mark", strconv.FormatUint(uint64(n.fwmark), 10)}},
 	}
 	iptablesNatJumpChains = append(iptablesNatJumpChains, initNatJumpChains...)
 	for _, jump := range iptablesNatJumpChains {
@@ -310,6 +321,12 @@ func (n *Iptablescontroller) initMark() error {
 		"-A prerouting_mark_wan -j MARK --set-xmark 0xc8/0xffffffff",
 		"-A prerouting_mark_wan -j CONNMARK --save-mark --nfmask 0xffffffff --ctmask 0xffffffff",
 		"-A prerouting_mark_wan -j RETURN",
+		"-A output_mark_vpn -j MARK --set-xmark 0xc8/0xffffffff",
+		"-A output_mark_vpn -j CONNMARK --save-mark --nfmask 0xffffffff --ctmask 0xffffffff",
+		"-A output_mark_vpn -j RETURN",
+		"-A postrouting_mark_vpn -j MARK --set-xmark 0xc8/0xffffffff",
+		"-A postrouting_mark_vpn -j CONNMARK --save-mark --nfmask 0xffffffff --ctmask 0xffffffff",
+		"-A postrouting_mark_vpn -j RETURN",
 	}
 	lines = append(lines, initRules...)
 

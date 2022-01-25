@@ -5,6 +5,7 @@ module github.com/tmax-cloud/virtualrouter
 go 1.16
 
 require (
+	github.com/strongswan/govici v0.5.2
 	github.com/vishvananda/netlink v1.1.1-0.20201029203352-d40f9887b852
 	github.com/vishvananda/netns v0.0.0-20210104183010-2eb08e3e575f // indirect
 	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4
