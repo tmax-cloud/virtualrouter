@@ -112,14 +112,17 @@ func main() {
 		return
 	}
 
+	iptablesController := iptablescontroller.New(intif, extif, fwmark, iptables.NewIPV4(), 10*time.Second)
+
 	controller := NewController(kubeClient, nfvClient,
 		nfvInformerFactory.Tmax().V1().NATRules(),
 		nfvInformerFactory.Tmax().V1().FireWallRules(),
 		nfvInformerFactory.Tmax().V1().LoadBalancerRules(),
-		iptablescontroller.New(intif, extif, fwmark, iptables.NewIPV4(), 10*time.Second))
+		iptablesController)
 
 	vpnController := vpncontroller.NewVPNController(kubeClient, networkClient,
-		networkInformerFactory.Network().V1alpha1().VPNs())
+		networkInformerFactory.Network().V1alpha1().VPNs(),
+		iptablesController, fwmark)
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.

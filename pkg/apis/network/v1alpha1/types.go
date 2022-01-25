@@ -7,7 +7,7 @@ import (
 // VPNSpec defines the desired state of VPN
 type VPNSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	Connections []Connection `json:"connections,omitempty"`
+	Connections []Connection `json:"connections"`
 	NodeName    string       `json:"nodename,omitempty"`
 }
 

@@ -30,6 +30,7 @@ type ChildSA struct {
 	ESPProposals []string `vici:"esp_proposals"`
 	StartAction  string   `vici:"start_action"`
 	//RekeyTime    int      `vici:"rekey_time"`
+	SetMarkOut string `vici:"set_mark_out"`
 }
 
 type Secret struct {

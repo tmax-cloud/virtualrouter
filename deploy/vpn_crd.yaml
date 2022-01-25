@@ -79,6 +79,8 @@ spec:
                 type: array
               nodename:
                 type: string
+            required:
+            - connections
             type: object
           status:
             description: VPNStatus defines the observed state of VPN

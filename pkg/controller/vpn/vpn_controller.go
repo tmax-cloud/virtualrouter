@@ -2,8 +2,10 @@ package vpn
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/tmax-cloud/virtualrouter/iptablescontroller"
 	"github.com/tmax-cloud/virtualrouter/pkg/apis/network/v1alpha1"
 	clientset "github.com/tmax-cloud/virtualrouter/pkg/generated/clientset/versioned"
 	"github.com/tmax-cloud/virtualrouter/pkg/generated/clientset/versioned/scheme"
@@ -37,14 +39,18 @@ type VPNController struct {
 	queue    workqueue.RateLimitingInterface
 	recorder record.EventRecorder
 
-	connectionCache map[string][]string
-	secretCache     map[string][]string
+	connectionCache    map[string][]string
+	secretCache        map[string][]string
+	iptablesController *iptablescontroller.Iptablescontroller
+	forwardMark        uint32
 }
 
 func NewVPNController(
 	kubeClientset kubernetes.Interface,
 	customClientset clientset.Interface,
-	vpnInformer informers.VPNInformer) *VPNController {
+	vpnInformer informers.VPNInformer,
+	iptablesController *iptablescontroller.Iptablescontroller,
+	forwardMark uint32) *VPNController {
 
 	broadcaster := record.NewBroadcaster()
 	broadcaster.StartStructuredLogging(0)
@@ -52,10 +58,12 @@ func NewVPNController(
 	recorder := broadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerName})
 
 	v := &VPNController{
-		kubeClientset:   kubeClientset,
-		customClientset: customClientset,
-		queue:           workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "vpn"),
-		recorder:        recorder,
+		kubeClientset:      kubeClientset,
+		customClientset:    customClientset,
+		queue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "vpn"),
+		recorder:           recorder,
+		iptablesController: iptablesController,
+		forwardMark:        forwardMark,
 	}
 
 	vpnInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -169,13 +177,22 @@ func (v *VPNController) syncHandler(key string) error {
 		klog.InfoS("VPN resource deleted", "key", key)
 		v.unloadAll(key)
 
+		// delete iptables policy accept rule
+		v.iptablesController.DeleteVPNPolicyRule(key)
+
 		return nil
 	}
 
 	klog.InfoS("VPN resource updated", "key", key)
 
 	// Parse VPN CR to create messages and send it
-	conns, secrets := createVICIMessage(vpn)
+	conns, secrets := v.createVICIMessage(vpn)
+
+	// add iptables policy accept rule
+	err = v.iptablesController.UpdateVPNPolicyRule(*vpn)
+	if err != nil {
+		return err
+	}
 
 	err = v.loadSecrets(secrets, key)
 	if err != nil {
@@ -190,7 +207,7 @@ func (v *VPNController) syncHandler(key string) error {
 	return nil
 }
 
-func createVICIMessage(vpn *v1alpha1.VPN) ([]Connection, []Secret) {
+func (v *VPNController) createVICIMessage(vpn *v1alpha1.VPN) ([]Connection, []Secret) {
 	conns := []Connection{}
 	secrets := []Secret{}
 	for _, connection := range vpn.Spec.Connections {
@@ -207,6 +224,7 @@ func createVICIMessage(vpn *v1alpha1.VPN) ([]Connection, []Secret) {
 			RemoteTS:     []string{connection.RightSubnet},
 			ESPProposals: espProposals,
 			StartAction:  "start",
+			SetMarkOut:   strconv.FormatUint(uint64(v.forwardMark), 10),
 		}
 
 		var version int
@@ -317,6 +335,7 @@ func (v *VPNController) unloadAll(key string) {
 			klog.ErrorS(err, "Failed to unload connection", "conn", connKey)
 		}
 	}
+	delete(v.connectionCache, key)
 
 	for _, secretKey := range secretKeys {
 		klog.InfoS("Unloading secret", "key", key, "secret", secretKey)
@@ -325,7 +344,5 @@ func (v *VPNController) unloadAll(key string) {
 			klog.ErrorS(err, "Failed to unload secret", "secret", secretKey)
 		}
 	}
-
-	delete(v.connectionCache, key)
 	delete(v.secretCache, key)
 }
