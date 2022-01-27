@@ -11,6 +11,7 @@ type Connection struct {
 	Version     int                 `vici:"version"`
 	Proposals   []string            `vici:"proposals"`
 	Keyingtries int                 `vici:"keyingtries"`
+	Encap       string              `vici:"encap"`
 	//ReauthTime  int                 `vici:"reauth_time"`
 }
 
