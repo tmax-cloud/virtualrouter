@@ -1,6 +1,7 @@
 FROM frolvlad/alpine-glibc:alpine-3.13_glibc-2.32
 
 RUN apk update && apk add iptables && apk add tcpdump && apk add conntrack-tools
+RUN apk add strongswan
 
 ADD virtualrouter /virtualrouter
 
@@ -18,5 +19,7 @@ RUN echo 'net.ipv4.conf.default.proxy_arp=1' >> /etc/sysctl.conf
 RUN echo 'net.ipv4.conf.all.rp_filter=2' >> /etc/sysctl.conf
 
 RUN chmod a+x /virtualrouter
+
+EXPOSE 500/udp 4500/udp
 
 ENTRYPOINT ["/virtualrouter"]
