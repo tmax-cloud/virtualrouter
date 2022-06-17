@@ -270,6 +270,7 @@ func (v *VPNController) createVICIMessage(vpn *v1alpha1.VPN) ([]Connection, []Se
 			Version:     version,
 			Proposals:   proposals,
 			Keyingtries: 0,
+			Encap:       "yes",
 		}
 
 		klog.InfoS("Creating connection message", "name", connection.Name, "left", connection.Left, "right", connection.Right,
