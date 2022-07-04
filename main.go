@@ -49,6 +49,9 @@ var (
 )
 
 func main() {
+
+	klog.Info("Junho's dev")
+
 	cmd := exec.Command("/usr/sbin/ipsec", "start", "--nofork")
 	if err := cmd.Start(); err != nil {
 		klog.Fatalf("error starting strongswan: %v", err)

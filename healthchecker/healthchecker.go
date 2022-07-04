@@ -195,7 +195,7 @@ func (h *healthChecker) Run(stopCh <-chan struct{}) {
 				}
 			}
 			var err error
-			conn, err = icmp.ListenPacket("ip4:icmp", ip)
+			//conn, err = icmp.ListenPacket("ip4:icmp", ip)
 			if err != nil {
 				klog.Error(err)
 				// Restart if generating listening socket is failed
