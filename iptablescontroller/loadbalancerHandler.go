@@ -176,7 +176,7 @@ func (n *Iptablescontroller) lbRuleDeleteEventHandler(lbRuleKey string) error {
 		}
 	}
 
-	if err := n.flushLBChain(lbRuleKey, string(iptables.TableNAT), lbRuleKey); err != nil {
+	if err := n.flushLBChain(lbRuleKey, string(iptables.TableNAT), lbRuleKey); err != nil { //
 		klog.Error(err)
 		return err
 	}
