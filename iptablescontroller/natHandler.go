@@ -46,6 +46,10 @@ func (n *Iptablescontroller) OnNATAdd(natrule *v1.NATRule) error {
 			chainName = natPostroutingSNATChain
 		} else if rule.Action.SrcIP != "" { //In case CR is for static SNAT
 			chainName = natPostroutingStaticNATChain
+			if err := setRouteForProxyARP(rule.Action.SrcIP); err != nil {
+				klog.ErrorS(err, "setRouteForProxyARP")
+				return err
+			}
 		} else if rule.Action.DstIP != "" { //In case CR is for static DNAT
 			chainName = natPreroutingStaticNATChain
 		} else {
