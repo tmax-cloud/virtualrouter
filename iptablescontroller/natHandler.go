@@ -25,69 +25,111 @@ func (n *Iptablescontroller) OnNATAdd(natrule *v1.NATRule) error {
 	klog.Info("onAdd Called")
 	defer n.mu.Unlock()
 
-	n.iptablesdata.Reset()
-
-	n.iptables.SaveInto(iptables.TableNAT, n.iptablesdata)
-	lines := strings.Split(n.iptablesdata.String(), "\n")
-
-	lines = lines[1 : len(lines)-3] // remove tails with COMMIT
-
+	/*--------Juneho's code begins---------*/
 	key := natrule.GetNamespace() + natrule.GetName()
-	var chainName string
-	oldRules, ok := n.natruleMap[key]
+	_, ok := n.natruleMap[key]
 	if ok {
-		//n.natruleSynced = false
-		klog.Warningf("Duplicated key(%s) detected During OnAdd Event. Going to overwrite rule : %+v to %+v", key, oldRules, natrule)
-		for _, rule := range oldRules.Spec.Rules {
-			if rule.Action.SrcIP == "0.0.0.0" {
-				chainName = string(natPostroutingSNATChain)
-				n.removeRule(&rule, chainName, &lines)
-			} else if rule.Action.SrcIP != "" {
-				chainName = string(natPostroutingStaticNATChain)
-				n.removeRule(&rule, chainName, &lines)
-				if err := delRouteForProxyARP(rule.Action.SrcIP); err != nil {
-					klog.ErrorS(err, "delRouteForProxyARP")
-					return err
-				}
-			} else if rule.Action.DstIP != "" {
-				chainName = string(natPreroutingStaticNATChain)
-				n.removeRule(&rule, chainName, &lines)
-			} else {
-				klog.Errorln("Wrong Format of rules")
-			}
-		}
+		return fmt.Errorf("The NAT Rule CR namespace-name exists: %s", key)
 	}
 
 	for _, rule := range natrule.Spec.Rules {
-		if rule.Action.SrcIP == "0.0.0.0" {
-			chainName = string(natPostroutingSNATChain)
-			n.appendRule(&rule, chainName, &lines)
-		} else if rule.Action.SrcIP != "" {
-			chainName = string(natPostroutingStaticNATChain)
-			n.appendRule(&rule, chainName, &lines)
-			if err := setRouteForProxyARP(rule.Action.SrcIP); err != nil {
-				klog.ErrorS(err, "delRouteForProxyARP")
-				return err
-			}
-		} else if rule.Action.DstIP != "" {
-			chainName = string(natPreroutingStaticNATChain)
-			n.appendRule(&rule, chainName, &lines)
+		var lines []string
+		n.appendRule(&rule, string(natPostroutingSNATChain), &lines) // Dummy chain name
+		lines = strings.Split(lines[0], "\n")
+		args := strings.Split(lines[0], " ")
+		args = args[2:]
+		wrongFormat := false
+		var chainName iptables.ChainName
+
+		// Setting the appropriate chain name
+		if rule.Action.SrcIP == "0.0.0.0" { //In case CR is for Masquerade
+			chainName = natPostroutingSNATChain
+		} else if rule.Action.SrcIP != "" { //In case CR is for static SNAT
+			chainName = natPostroutingStaticNATChain
+		} else if rule.Action.DstIP != "" { //In case CR is for static DNAT
+			chainName = natPreroutingStaticNATChain
 		} else {
 			klog.Errorln("Wrong Format of rules")
+			wrongFormat = true
 		}
-	}
+		if !wrongFormat {
+			// Apply the rule through the iptables command
+			if _, err := n.iptables.EnsureRule(iptables.Append, iptables.TableNAT, chainName, args...); err != nil {
+				klog.ErrorS(err, "Failed to  add NAT rule : chain:", string(chainName), args)
+			}
+			klog.InfoS("NAT rule added. chain: ", string(chainName), args)
+		}
 
-	lines = append(lines, "COMMIT")
-	n.iptablesdata.Reset()
-	writeLine(n.iptablesdata, lines...)
-	klog.Infof("Deploying rules : %s", n.iptablesdata.String())
-	if err := n.iptables.Restore("nat", n.iptablesdata.Bytes(), true, true); err != nil {
-		klog.Error(err)
-		return err
 	}
 
 	n.natruleMap[key] = *natrule
 	return nil
+
+	/*--------Juneho's code ends-----------*/
+
+	// n.iptablesdata.Reset()
+
+	// n.iptables.SaveInto(iptables.TableNAT, n.iptablesdata)
+	// lines := strings.Split(n.iptablesdata.String(), "\n")
+
+	// lines = lines[1 : len(lines)-3] // remove tails with COMMIT
+
+	// key := natrule.GetNamespace() + natrule.GetName()
+	// var chainName string
+	// oldRules, ok := n.natruleMap[key]
+	// if ok {
+	// 	//n.natruleSynced = false
+	// 	klog.Warningf("Duplicated key(%s) detected During OnAdd Event. Going to overwrite rule : %+v to %+v", key, oldRules, natrule)
+	// 	for _, rule := range oldRules.Spec.Rules {
+	// 		if rule.Action.SrcIP == "0.0.0.0" {
+	// 			chainName = string(natPostroutingSNATChain)
+	// 			n.removeRule(&rule, chainName, &lines)
+	// 		} else if rule.Action.SrcIP != "" {
+	// 			chainName = string(natPostroutingStaticNATChain)
+	// 			n.removeRule(&rule, chainName, &lines)
+	// 			if err := delRouteForProxyARP(rule.Action.SrcIP); err != nil {
+	// 				klog.ErrorS(err, "delRouteForProxyARP")
+	// 				return err
+	// 			}
+	// 		} else if rule.Action.DstIP != "" {
+	// 			chainName = string(natPreroutingStaticNATChain)
+	// 			n.removeRule(&rule, chainName, &lines)
+	// 		} else {
+	// 			klog.Errorln("Wrong Format of rules")
+	// 		}
+	// 	}
+	// }
+
+	// for _, rule := range natrule.Spec.Rules {
+	// 	if rule.Action.SrcIP == "0.0.0.0" {
+	// 		chainName = string(natPostroutingSNATChain)
+	// 		n.appendRule(&rule, chainName, &lines)
+	// 	} else if rule.Action.SrcIP != "" {
+	// 		chainName = string(natPostroutingStaticNATChain)
+	// 		n.appendRule(&rule, chainName, &lines)
+	// 		if err := setRouteForProxyARP(rule.Action.SrcIP); err != nil {
+	// 			klog.ErrorS(err, "delRouteForProxyARP")
+	// 			return err
+	// 		}
+	// 	} else if rule.Action.DstIP != "" {
+	// 		chainName = string(natPreroutingStaticNATChain)
+	// 		n.appendRule(&rule, chainName, &lines)
+	// 	} else {
+	// 		klog.Errorln("Wrong Format of rules")
+	// 	}
+	// }
+
+	// lines = append(lines, "COMMIT")
+	// n.iptablesdata.Reset()
+	// writeLine(n.iptablesdata, lines...)
+	// klog.Infof("Deploying rules : %s", n.iptablesdata.String())
+	// if err := n.iptables.Restore("nat", n.iptablesdata.Bytes(), true, true); err != nil {
+	// 	klog.Error(err)
+	// 	return err
+	// }
+
+	// n.natruleMap[key] = *natrule
+	// return nil
 }
 
 func (n *Iptablescontroller) OnNATDelete(natrule *v1.NATRule) error {

@@ -25,39 +25,20 @@ func (n *Iptablescontroller) OnFirewallAdd(firewallrule *v1.FireWallRule) error 
 	klog.Info("onAdd Called")
 	defer n.mu.Unlock()
 
-	n.iptablesdata.Reset()
-
-	n.iptables.SaveInto(iptables.TableFilter, n.iptablesdata)
-	lines := strings.Split(n.iptablesdata.String(), "\n")
-
-	lines = lines[1 : len(lines)-3] // remove tails with COMMIT
-
 	key := firewallrule.GetNamespace() + firewallrule.GetName()
-	var chainName string
-	oldRules, ok := n.firewallruleMap[key]
-	if ok {
-		//n.natruleSynced = false
-		klog.Warningf("Duplicated key(%s) detected During OnFirewallAdd Event. Going to overwrite rule : %+v to %+v", key, oldRules, firewallrule)
-		for _, rule := range oldRules.Spec.Rules {
-			chainName = string(filterForwardfwruleChain)
-			n.removeRule(&rule, chainName, &lines)
-		}
-	}
-
 	for _, rule := range firewallrule.Spec.Rules {
-		chainName = string(filterForwardfwruleChain)
-		n.appendRule(&rule, chainName, &lines)
-	}
+		var lines []string
+		n.appendRule(&rule, string(filterForwardfwruleChain), &lines)
+		lines = strings.Split(lines[0], "\n")
+		args := strings.Split(lines[0], " ")
+		args = args[2:]
+		if _, err := n.iptables.EnsureRule(iptables.Append, iptables.TableFilter, filterForwardfwruleChain, args...); err != nil {
+			klog.ErrorS(err, "Table: ", string(iptables.TableFilter), "chain: ", string(filterForwardfwruleChain), "args: ", args)
+			return err
+		}
+		klog.InfoS("Rule added", "Table: ", string(iptables.TableFilter), "chain:", string(filterForwardfwruleChain), "args: ", args)
 
-	lines = append(lines, "COMMIT")
-	n.iptablesdata.Reset()
-	writeLine(n.iptablesdata, lines...)
-	klog.Infof("Deploying rules : %s", n.iptablesdata.String())
-	if err := n.iptables.Restore("filter", n.iptablesdata.Bytes(), true, true); err != nil {
-		klog.Error(err)
-		return err
 	}
-
 	n.firewallruleMap[key] = *firewallrule
 	return nil
 }
@@ -107,7 +88,6 @@ func (n *Iptablescontroller) OnFirewallUpdate(firewallrule *v1.FireWallRule) err
 
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	klog.Info("onUpdate Called")
 
 	n.iptablesdata.Reset()
 
@@ -117,6 +97,7 @@ func (n *Iptablescontroller) OnFirewallUpdate(firewallrule *v1.FireWallRule) err
 	lines = lines[1 : len(lines)-3] // remove tails with COMMIT
 
 	key := firewallrule.GetNamespace() + firewallrule.GetName()
+	klog.Infof("onUpdate Called!: %s", key)
 	// for k, v := range n.natruleMap {
 	// 	klog.Infof("key: %s, value: %+v", k, v)
 	// }
