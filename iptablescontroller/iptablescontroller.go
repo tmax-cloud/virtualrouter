@@ -68,12 +68,19 @@ var (
 	iptablesFilterJumpChains = []iptablesJumpChain{}
 )
 
+type FwRuleStruct struct {
+	ruleHashMap map[v1.Match]v1.Rules
+}
+
 type Iptablescontroller struct {
 	// natrulesChange *tracker.Tracker
 
-	mu                  sync.Mutex
-	natruleMap          map[string]v1.NATRule
-	firewallruleMap     map[string]v1.FireWallRule
+	mu         sync.Mutex
+	natruleMap map[string]v1.NATRule
+
+	// firewallruleMap     map[string]v1.FireWallRule
+	firewallRuleMap map[string]FwRuleStruct
+
 	loadbalancerruleMap map[string]v1.LoadBalancerRule
 	vpnMap              map[string]networkv1alpha1.VPN
 
@@ -101,7 +108,7 @@ func New(intif string, extif string, fwmark uint32, iptables iptables.Interface,
 	c := &Iptablescontroller{
 		mu:                     sync.Mutex{},
 		natruleMap:             make(map[string]v1.NATRule),
-		firewallruleMap:        make(map[string]v1.FireWallRule),
+		firewallRuleMap:        make(map[string]FwRuleStruct),
 		loadbalancerruleMap:    make(map[string]v1.LoadBalancerRule),
 		vpnMap:                 make(map[string]networkv1alpha1.VPN),
 		natruleSynced:          false,
