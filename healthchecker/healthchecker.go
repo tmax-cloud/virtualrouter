@@ -182,30 +182,30 @@ func (h *healthChecker) Run(stopCh <-chan struct{}) {
 	ctx, cancle := context.WithCancel(context.Background())
 	defer cancle()
 
-	h.once.Do(func() {
-		for {
-			ifaces, _ := net.Interfaces()
-			var ip string
-			for _, iface := range ifaces {
-				if iface.Name == "ethint" {
-					addrs, _ := iface.Addrs()
-					ipv4, _, _ := net.ParseCIDR(addrs[0].String())
-					ip = ipv4.String()
-					break
-				}
-			}
-			var err error
-			conn, err = icmp.ListenPacket("ip4:icmp", ip)
-			if err != nil {
-				klog.Error(err)
-				// Restart if generating listening socket is failed
-				time.Sleep(1 * time.Second)
-				continue
-			}
-			klog.Info("got listen socket")
-			break
-		}
-	})
+	// h.once.Do(func() {
+	// 	for {
+	// 		ifaces, _ := net.Interfaces()
+	// 		var ip string
+	// 		for _, iface := range ifaces {
+	// 			if iface.Name == "ethint" {
+	// 				addrs, _ := iface.Addrs()
+	// 				ipv4, _, _ := net.ParseCIDR(addrs[0].String())
+	// 				ip = ipv4.String()
+	// 				break
+	// 			}
+	// 		}
+	// 		var err error
+	// 		conn, err = icmp.ListenPacket("ip4:icmp", ip)
+	// 		if err != nil {
+	// 			klog.Error(err)
+	// 			// Restart if generating listening socket is failed
+	// 			time.Sleep(1 * time.Second)
+	// 			continue
+	// 		}
+	// 		klog.Info("got listen socket")
+	// 		break
+	// 	}
+	// })
 
 	klog.Info("Start healthChecker")
 	go h.run(ctx)
