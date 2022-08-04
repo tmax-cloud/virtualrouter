@@ -176,7 +176,7 @@ func (n *Iptablescontroller) lbRuleDeleteEventHandler(lbRuleKey string) error {
 		}
 	}
 
-	if err := n.flushLBChain(lbRuleKey, string(iptables.TableNAT), lbRuleKey); err != nil {
+	if err := n.flushLBChain(lbRuleKey, string(iptables.TableNAT), lbRuleKey); err != nil { //
 		klog.Error(err)
 		return err
 	}
@@ -324,6 +324,8 @@ func (n *Iptablescontroller) runLBRuleSyncer(lbRuleKey string) {
 		case <-lbRuleMap[lbRuleKey].ctx.Done():
 			klog.Info(lbRuleKey)
 			lbRuleMap[lbRuleKey].healthCheckManager.stopCh <- struct{}{}
+			klog.Info("Done!")
+			return
 		}
 	}
 }

@@ -34,7 +34,7 @@ def main():
     DOCKER_REGISTRY = 'registry.network-team.tmaxanc.com/cloud/'
     # DOCKER_REGISTRY = "172.23.3.100/cloud/"
     DOCKER_IMAGE_NAME = "virtualrouter"
-    DOCKER_IMAGE_TAG = "v0.2.1-dev"
+    DOCKER_IMAGE_TAG = "v0.2.2-dev"
 
     out, err = go_build(package=PKG_NAME, output=GO_BINARY_NAME)
     if err != "" or out != "":

@@ -19,7 +19,7 @@ const (
 func (n *Iptablescontroller) OnFirewallAdd(firewallrule *v1.FireWallRule) error {
 	if fwruleValidationCheck(firewallrule) == FWRULE_INVALIDE {
 
-		return fmt.Errorf("FW Rule is invalid")
+		return fmt.Errorf("FW Rule is invalid") //
 	}
 
 	n.mu.Lock()
@@ -34,7 +34,7 @@ func (n *Iptablescontroller) OnFirewallAdd(firewallrule *v1.FireWallRule) error 
 	for _, rule := range firewallrule.Spec.Rules {
 		var buffer []string
 		n.appendRule(&rule, "", &buffer)
-		klog.Infoln("Input rule in the buffer:", buffer)
+		// klog.Infoln("Input rule in the buffer:", buffer)
 		buffer = strings.Split(buffer[0], "\n")
 		args := strings.Split(buffer[0], " ")
 		args = args[1:] //to remove the symbol at the very beginning
@@ -48,10 +48,10 @@ func (n *Iptablescontroller) OnFirewallAdd(firewallrule *v1.FireWallRule) error 
 		// h.Write([]byte(fmt.Sprintf("%v", rule.Match))) // add the data to be hashed
 		// ruleIndex := fmt.Sprintf("%x", h.Sum(nil))     // yield the hash of the match
 		newFwHashRule.ruleHashMap[rule.Match] = rule
-		//klog.Infoln("Hash Map added", newFwHashRule.ruleHashMap)
 
 	}
 
+	klog.Infoln("Map added\n", n.firewallRuleMap)
 	n.iptablesdata.Reset()
 	n.iptables.SaveInto(iptables.TableFilter, n.iptablesdata)
 	klog.Infoln("Deploying Rules:", "\n", n.iptablesdata.String())
@@ -183,13 +183,14 @@ func (n *Iptablescontroller) OnFirewallUpdate(newfwRule *v1.FireWallRule) error 
 	n.iptablesdata.Reset()
 	writeLine(n.iptablesdata, lines...)
 
-	klog.Infof("Deploying rules : %s", n.iptablesdata.String())
+	klog.Infof("Deploying rules\n : %s", n.iptablesdata.String())
 	if err := n.iptables.Restore("filter", n.iptablesdata.Bytes(), true, true); err != nil {
 		klog.Error(err)
 		return err
 	}
 
-	oldRules = newFwHashRule
+	n.firewallRuleMap[key] = newFwHashRule
+	klog.Infoln("Map status\n", n.firewallRuleMap)
 	return nil
 }
 
