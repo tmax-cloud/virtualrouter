@@ -142,7 +142,7 @@ func (h *healthChecker) clearTarget(key string) {
 		// h.dumpTarget[key] = e
 	}
 
-	//notify that target have to be synced with key
+	//notify that target have to be synced with key//
 	h.syncHandler <- key
 }
 

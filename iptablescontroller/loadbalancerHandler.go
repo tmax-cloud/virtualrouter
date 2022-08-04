@@ -324,6 +324,8 @@ func (n *Iptablescontroller) runLBRuleSyncer(lbRuleKey string) {
 		case <-lbRuleMap[lbRuleKey].ctx.Done():
 			klog.Info(lbRuleKey)
 			lbRuleMap[lbRuleKey].healthCheckManager.stopCh <- struct{}{}
+			klog.Info("Done!") //
+
 			return
 		}
 	}
