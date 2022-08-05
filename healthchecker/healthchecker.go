@@ -148,7 +148,7 @@ func (h *healthChecker) clearTarget(key string) {
 
 func icmpMultiResponseHandler() {
 	for {
-		klog.Info("I'm reading")
+		// klog.Info("I'm reading")
 		if len(icmpListener) == 0 {
 			klog.Info("no listener in handler")
 			<-addListenerChan

@@ -138,7 +138,7 @@ func (n *Iptablescontroller) OnFirewallUpdate(newfwRule *v1.FireWallRule) error 
 
 		oldRule, exist := oldRules.ruleHashMap[rule.Match]
 		if exist { //If match exist in the old rule
-			klog.Infoln("old-rule exists")
+			klog.Infoln("old-rule exists!")
 			if oldRule.Action == rule.Action { //If even the action statement in the old and the new rule is same
 				// Do nothing
 				klog.Infoln("match and action is same")

@@ -199,7 +199,7 @@ func (n *Iptablescontroller) lbRuleDeleteEventHandler(lbRuleKey string) error {
 		}
 	}
 	lbRuleSetInstance.lbRuleKeys = append(lbRuleSetInstance.lbRuleKeys[:lbRuleKeyIndex], lbRuleSetInstance.lbRuleKeys[lbRuleKeyIndex+1:]...)
-	delete(lbRuleMap, lbRuleKey)
+	// delete(lbRuleMap, lbRuleKey)
 
 	return nil
 }
@@ -324,7 +324,8 @@ func (n *Iptablescontroller) runLBRuleSyncer(lbRuleKey string) {
 		case <-lbRuleMap[lbRuleKey].ctx.Done():
 			klog.Info(lbRuleKey)
 			lbRuleMap[lbRuleKey].healthCheckManager.stopCh <- struct{}{}
-			klog.Info("Done!")
+			klog.Infoln("Done!")
+			delete(lbRuleMap, lbRuleKey)
 			return
 		}
 	}
