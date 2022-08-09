@@ -30,6 +30,7 @@ func (n *Iptablescontroller) OnNATAdd(natrule *v1.NATRule) error {
 	if ok {
 		return fmt.Errorf("The NAT Rule CR namespace-name exists: %s", key)
 	}
+	klog.Infoln("nat rule: ", natrule.Spec.Rules)
 
 	for _, rule := range natrule.Spec.Rules {
 		var lines []string
