@@ -11,6 +11,7 @@ import (
 
 type NATRULEVALIDATION bool
 
+//
 const (
 	NATRULE_INVALIDE NATRULEVALIDATION = false
 	NATRULE_VALID    NATRULEVALIDATION = true
@@ -52,6 +53,12 @@ func (n *Iptablescontroller) OnNATAdd(natrule *v1.NATRule) error {
 			}
 		} else if rule.Action.DstIP != "" { //In case CR is for static DNAT
 			chainName = natPreroutingStaticNATChain
+			if err := setRouteForProxyARP(rule.Match.DstIP); err != nil {
+				klog.ErrorS(err, "setRouteForProxyARP")
+				return err
+			} else {
+				klog.Infoln("Proxy ARP")
+			}
 		} else {
 			klog.Errorln("Wrong Format of rules")
 			wrongFormat = true
@@ -105,6 +112,10 @@ func (n *Iptablescontroller) OnNATDelete(natrule *v1.NATRule) error {
 		} else if rule.Action.DstIP != "" {
 			chainName = string(natPreroutingStaticNATChain)
 			n.removeRule(&rule, chainName, &lines)
+			if err := delRouteForProxyARP(rule.Match.DstIP); err != nil {
+				klog.ErrorS(err, "delRouteForProxyARP")
+				return err
+			}
 		} else {
 			klog.Errorln("Wrong Format of rules")
 		}
@@ -163,6 +174,10 @@ func (n *Iptablescontroller) OnNATUpdate(natrule *v1.NATRule) error {
 			} else if rule.Action.DstIP != "" {
 				chainName = string(natPreroutingStaticNATChain)
 				n.removeRule(&rule, chainName, &lines)
+				if err := delRouteForProxyARP(rule.Match.DstIP); err != nil {
+					klog.ErrorS(err, "delRouteForProxyARP")
+					return err
+				}
 			} else {
 				klog.Errorln("Wrong Format of rules")
 			}
@@ -177,12 +192,16 @@ func (n *Iptablescontroller) OnNATUpdate(natrule *v1.NATRule) error {
 			chainName = string(natPostroutingStaticNATChain)
 			n.appendRule(&rule, chainName, &lines)
 			if err := setRouteForProxyARP(rule.Action.SrcIP); err != nil {
-				klog.ErrorS(err, "delRouteForProxyARP")
+				klog.ErrorS(err, "setRouteForProxyARP")
 				return err
 			}
 		} else if rule.Action.DstIP != "" {
 			chainName = string(natPreroutingStaticNATChain)
 			n.appendRule(&rule, chainName, &lines)
+			if err := setRouteForProxyARP(rule.Match.DstIP); err != nil {
+				klog.ErrorS(err, "setRouteForProxyARP")
+				return err
+			}
 		} else {
 			klog.Errorln("Wrong Format of rules")
 		}
