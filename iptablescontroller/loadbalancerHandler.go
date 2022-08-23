@@ -47,6 +47,7 @@ type lbRule struct {
 	lbRuleSetKey       string
 	lbVirtualIP        string
 	lbVirtualPort      int
+	protocol           string
 	endpointKeys       endpointKeysList
 	healthCheckManager *healthCheckerInstance
 	ctx                context.Context
@@ -101,6 +102,7 @@ func (n *Iptablescontroller) OnLoadbalanceAdd(loadbalancerrule *v1.LoadBalancerR
 	lbRuleSetKey := loadbalancerrule.GetNamespace() + loadbalancerrule.GetName()
 
 	if _, exist := lbRuleSetMap[lbRuleSetKey]; exist {
+		klog.Info("Duplicate resource")
 		return fmt.Errorf("duplicated name of resource: %s", lbRuleSetKey)
 	}
 
@@ -111,6 +113,7 @@ func (n *Iptablescontroller) OnLoadbalanceAdd(loadbalancerrule *v1.LoadBalancerR
 	}
 	lbRuleSetMap[lbRuleSetKey] = lbRuleSetInstance
 	for _, lbrule := range loadbalancerrule.Spec.Rules {
+		klog.Infoln("\nUn LB rule added\n", lbrule)
 		// lbRuleKey := generatelbkey(&lbrule)
 		// lbRuleSetInstance.lbRuleKeys = append(lbRuleSetInstance.lbRuleKeys, lbRuleKey)
 		n.lbRuleAddEventHandler(&lbrule, lbRuleSetKey)
@@ -130,6 +133,7 @@ func (n *Iptablescontroller) lbRuleAddEventHandler(lbrule *v1.LBRules, lbRuleSet
 		key:           lbRuleKey,
 		lbVirtualIP:   lbrule.LoadBalancerIP,
 		lbVirtualPort: lbrule.LoadBalancerPort,
+		protocol:      lbrule.Protocol,
 		endpointKeys:  make([]string, 0),
 		healthCheckManager: &healthCheckerInstance{
 			runner: healthchecker.NewHealthChecker(&healthchecker.Config{
@@ -280,10 +284,10 @@ func (n *Iptablescontroller) runLBRuleSyncer(lbRuleKey string) {
 						Port:        endpointInstance.healthCheckPort,
 						HealthCheck: healthchecker.METHOD(endpointInstance.method),
 					})
-				klog.Info(endpointKey)
-				klog.Info(endpointInstance.status)
-				klog.Info(healthCheckTargetKey)
-				klog.Info(lbRuleMap[lbRuleKey].healthCheckManager.runner.GetTargetStatus(healthCheckTargetKey))
+				// klog.Info(endpointKey)
+				// klog.Info(endpointInstance.status)
+				// klog.Info(healthCheckTargetKey)
+				// klog.Info(lbRuleMap[lbRuleKey].healthCheckManager.runner.GetTargetStatus(healthCheckTargetKey))
 				if endpointInstance.status != lbRuleMap[lbRuleKey].healthCheckManager.runner.GetTargetStatus(healthCheckTargetKey) {
 					ruleChanged = true
 					endpointInstance.status = lbRuleMap[lbRuleKey].healthCheckManager.runner.GetTargetStatus(healthCheckTargetKey)
@@ -477,7 +481,7 @@ func transRule(lbRuleInstance *lbRule) []*v1.Rules {
 	var rules []*v1.Rules
 
 	for _, endpointKey := range lbRuleInstance.endpointKeys {
-		klog.Info(endpointMap[endpointKey])
+		// klog.Info(endpointMap[endpointKey])
 		if !endpointMap[endpointKey].status {
 			continue
 		}
@@ -499,8 +503,9 @@ func transRule(lbRuleInstance *lbRule) []*v1.Rules {
 		} else {
 			rule = &v1.Rules{
 				Match: v1.Match{
-					DstIP:   lbRuleInstance.lbVirtualIP,
-					DstPort: lbRuleInstance.lbVirtualPort,
+					DstIP:    lbRuleInstance.lbVirtualIP,
+					DstPort:  lbRuleInstance.lbVirtualPort,
+					Protocol: lbRuleInstance.protocol,
 				},
 				Action: v1.Action{
 					DstIP:   endpointMap[endpointKey].endpointIP,
@@ -538,23 +543,28 @@ func validLBRuleFormat(lbRules *[]v1.LBRules) LBRULEVALIDATION {
 	for _, rule := range *lbRules {
 		key := generatelbkey(&rule)
 		if _, exist := m[key]; exist {
+			klog.Info("The key exists")
 			return INVALIDE
 		} else {
 			// insert but do nothing
 			m[key] = true
 		}
 		if rule.LoadBalancerPort > 65535 {
+			klog.Info("Too large vport number:", rule.LoadBalancerPort)
 			return INVALIDE
 		}
 		for _, endpoint := range rule.Backends {
 			if endpoint.BackendPort > 65535 {
+				klog.Info("Too large Backend port number:", endpoint.BackendPort)
 				return INVALIDE
 			}
 			if endpoint.HealthCheckPort > 65535 {
+				klog.Info("Too large Healthcheck port number:", endpoint.HealthCheckPort)
 				return INVALIDE
 			}
 			if (endpoint.BackendPort != 0 && rule.LoadBalancerPort == 0) ||
 				(rule.LoadBalancerPort != 0 && endpoint.BackendPort == 0) {
+				klog.Info("Abnormal port number composition:", endpoint.BackendPort, rule.LoadBalancerPort, rule.LoadBalancerPort, endpoint.BackendPort)
 				return INVALIDE
 			}
 			if endpoint.HealthCheckMethod == string(healthchecker.L4TCPHEALTHCHECK) &&
