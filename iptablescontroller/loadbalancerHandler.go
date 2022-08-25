@@ -94,7 +94,6 @@ func (n *Iptablescontroller) OnLoadbalanceAdd(loadbalancerrule *v1.LoadBalancerR
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	klog.Info("OnLoadbalanceAdd called")
-
 	// key := rule.GetNamespace() + rule.GetName()
 	if validationCheck(loadbalancerrule) == INVALIDE {
 		return fmt.Errorf("LB Rule is invalid")
@@ -479,13 +478,26 @@ type healthCheckerInstance struct {
 
 func transRule(lbRuleInstance *lbRule) []*v1.Rules {
 	var rules []*v1.Rules
+	var totalWeight int
+	totalWeight = 0
+
+	for _, endpointKey := range lbRuleInstance.endpointKeys {
+		if !endpointMap[endpointKey].status { //if the endpoint is not alive
+			continue
+		}
+		totalWeight = totalWeight + endpointMap[endpointKey].weight
+	}
 
 	for _, endpointKey := range lbRuleInstance.endpointKeys {
 		// klog.Info(endpointMap[endpointKey])
 		if !endpointMap[endpointKey].status {
 			continue
 		}
-		weight := float64(endpointMap[endpointKey].weight) * 0.01
+		// weight := float64(endpointMap[endpointKey].weight) * 0.01
+		weight := float64(endpointMap[endpointKey].weight) / float64(totalWeight)
+		klog.Infoln("weight:", weight, "endpointWeigh:", endpointMap[endpointKey].weight, "total:", totalWeight)
+		totalWeight = totalWeight - endpointMap[endpointKey].weight
+
 		var rule *v1.Rules
 		if lbRuleInstance.lbVirtualPort == 0 || endpointMap[endpointKey].endpointPort == 0 {
 			rule = &v1.Rules{
@@ -565,6 +577,10 @@ func validLBRuleFormat(lbRules *[]v1.LBRules) LBRULEVALIDATION {
 			if (endpoint.BackendPort != 0 && rule.LoadBalancerPort == 0) ||
 				(rule.LoadBalancerPort != 0 && endpoint.BackendPort == 0) {
 				klog.Info("Abnormal port number composition:", endpoint.BackendPort, rule.LoadBalancerPort, rule.LoadBalancerPort, endpoint.BackendPort)
+				return INVALIDE
+			}
+			if rule.LoadBalancerPort != 0 && rule.Protocol == "" {
+				klog.Info("Cannot enforce the LB rule: In case the LB port is specified, protocol information should  be specified (iptables constraint)")
 				return INVALIDE
 			}
 			if endpoint.HealthCheckMethod == string(healthchecker.L4TCPHEALTHCHECK) &&
