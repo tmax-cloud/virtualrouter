@@ -36,10 +36,10 @@ def docker_push(name, tag, registry):
 def main():
     PKG_NAME = 'github.com/tmax-cloud/virtualrouter'
     GO_BINARY_NAME = 'virtualrouter'
-    DOCKER_REGISTRY = 'registry.network-team.tmaxanc.com/cloud/'
-    #DOCKER_REGISTRY = '192.168.1.163:5000/'
+    #DOCKER_REGISTRY = 'registry.network-team.tmaxanc.com/cloud/'
+    DOCKER_REGISTRY = '192.168.1.163:5000/'
     DOCKER_IMAGE_NAME = "virtualrouter"
-    DOCKER_IMAGE_TAG = "v0.2.5-dev"
+    DOCKER_IMAGE_TAG = "v0.2.3-dev"
 
     out, err = go_build(package=PKG_NAME, output=GO_BINARY_NAME)
     if err != "" or out != "":

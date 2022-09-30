@@ -128,7 +128,6 @@ type Rules struct {
 type LBRules struct {
 	LoadBalancerIP   string    `json:"loadBalancerIP"`
 	LoadBalancerPort int       `json:"loadBalancerPort"`
-	Protocol         string    `json:"protocol"`
 	Backends         []Backend `json:"backends"`
 }
 

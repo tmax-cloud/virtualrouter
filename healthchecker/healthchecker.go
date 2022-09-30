@@ -19,13 +19,12 @@ type METHOD string
 
 // using map because icmp support only one listener. key: icmp sender's id value, value: result channel
 var icmpListener map[int]chan bool
-
-// var addListenerChan chan int
+var addListenerChan chan int
 var conn *icmp.PacketConn
 
 func init() {
 	icmpListener = make(map[int]chan bool)
-	// addListenerChan = make(chan int)
+	addListenerChan = make(chan int)
 	go icmpMultiResponseHandler()
 }
 
@@ -152,7 +151,7 @@ func icmpMultiResponseHandler() {
 		// klog.Info("I'm reading")
 		if len(icmpListener) == 0 {
 			klog.Info("no listener in handler")
-			// <-addListenerChan
+			<-addListenerChan
 		}
 		reply := make([]byte, 1500)
 		n, _, err := conn.ReadFrom(reply)
@@ -174,9 +173,7 @@ func icmpMultiResponseHandler() {
 				continue
 			}
 			klog.Infof("ID: %s", pkt.ID)
-			if _, exists := icmpListener[pkt.ID]; exists {
-				icmpListener[pkt.ID] <- true
-			}
+			icmpListener[pkt.ID] <- true
 		}
 	}
 }
@@ -310,30 +307,30 @@ func (e *Endpoint) pingRunLoop(parentCtx context.Context, interval time.Duration
 	}
 	klog.Infof("myLinux: %s", runtime.GOOS)
 
-	// var conn *icmp.PacketConn
-	// var err error
-	// ifaces, _ := net.Interfaces()
-	// var ip string
-	// for _, iface := range ifaces {
-	// 	if iface.Name == "ethint" {
-	// 		addrs, _ := iface.Addrs()
-	// 		ipv4, _, _ := net.ParseCIDR(addrs[0].String())
-	// 		ip = ipv4.String()
-	// 		break
-	// 	}
-	// }
-	// for {
-	// 	// conn, err = icmp.ListenPacket("ip4:icmp", "0.0.0.0")
-	// 	conn, err = icmp.ListenPacket("ip4:icmp", ip)
-	// 	if err != nil {
-	// 		klog.Error(err)
-	// 		// Restart if generating listening socket is failed
-	// 		time.Sleep(1 * time.Second)
-	// 	} else {
-	// 		break
-	// 	}
-	// }
-	// defer conn.Close()
+	var conn *icmp.PacketConn
+	var err error
+	ifaces, _ := net.Interfaces()
+	var ip string
+	for _, iface := range ifaces {
+		if iface.Name == "ethint" {
+			addrs, _ := iface.Addrs()
+			ipv4, _, _ := net.ParseCIDR(addrs[0].String())
+			ip = ipv4.String()
+			break
+		}
+	}
+	for {
+		// conn, err = icmp.ListenPacket("ip4:icmp", "0.0.0.0")
+		conn, err = icmp.ListenPacket("ip4:icmp", ip)
+		if err != nil {
+			klog.Error(err)
+			// Restart if generating listening socket is failed
+			time.Sleep(1 * time.Second)
+		} else {
+			break
+		}
+	}
+	defer conn.Close()
 
 	pingInterval := time.NewTicker(interval)
 	defer pingInterval.Stop()
@@ -350,7 +347,7 @@ func (e *Endpoint) pingRunLoop(parentCtx context.Context, interval time.Duration
 	klog.InfoS("ID", id)
 	if len(icmpListener) == 0 {
 		klog.Info("no listener in caller")
-		// addListenerChan <- id
+		addListenerChan <- id
 	}
 	recvChan := make(chan bool)
 	icmpListener[id] = recvChan

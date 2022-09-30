@@ -47,7 +47,6 @@ type lbRule struct {
 	lbRuleSetKey       string
 	lbVirtualIP        string
 	lbVirtualPort      int
-	protocol           string
 	endpointKeys       endpointKeysList
 	healthCheckManager *healthCheckerInstance
 	ctx                context.Context
@@ -94,6 +93,7 @@ func (n *Iptablescontroller) OnLoadbalanceAdd(loadbalancerrule *v1.LoadBalancerR
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	klog.Info("OnLoadbalanceAdd called")
+
 	// key := rule.GetNamespace() + rule.GetName()
 	if validationCheck(loadbalancerrule) == INVALIDE {
 		return fmt.Errorf("LB Rule is invalid")
@@ -101,7 +101,6 @@ func (n *Iptablescontroller) OnLoadbalanceAdd(loadbalancerrule *v1.LoadBalancerR
 	lbRuleSetKey := loadbalancerrule.GetNamespace() + loadbalancerrule.GetName()
 
 	if _, exist := lbRuleSetMap[lbRuleSetKey]; exist {
-		klog.Info("Duplicate resource")
 		return fmt.Errorf("duplicated name of resource: %s", lbRuleSetKey)
 	}
 
@@ -112,7 +111,6 @@ func (n *Iptablescontroller) OnLoadbalanceAdd(loadbalancerrule *v1.LoadBalancerR
 	}
 	lbRuleSetMap[lbRuleSetKey] = lbRuleSetInstance
 	for _, lbrule := range loadbalancerrule.Spec.Rules {
-		klog.Infoln("\nUn LB rule added\n", lbrule)
 		// lbRuleKey := generatelbkey(&lbrule)
 		// lbRuleSetInstance.lbRuleKeys = append(lbRuleSetInstance.lbRuleKeys, lbRuleKey)
 		n.lbRuleAddEventHandler(&lbrule, lbRuleSetKey)
@@ -132,7 +130,6 @@ func (n *Iptablescontroller) lbRuleAddEventHandler(lbrule *v1.LBRules, lbRuleSet
 		key:           lbRuleKey,
 		lbVirtualIP:   lbrule.LoadBalancerIP,
 		lbVirtualPort: lbrule.LoadBalancerPort,
-		protocol:      lbrule.Protocol,
 		endpointKeys:  make([]string, 0),
 		healthCheckManager: &healthCheckerInstance{
 			runner: healthchecker.NewHealthChecker(&healthchecker.Config{
@@ -283,10 +280,10 @@ func (n *Iptablescontroller) runLBRuleSyncer(lbRuleKey string) {
 						Port:        endpointInstance.healthCheckPort,
 						HealthCheck: healthchecker.METHOD(endpointInstance.method),
 					})
-				// klog.Info(endpointKey)
-				// klog.Info(endpointInstance.status)
-				// klog.Info(healthCheckTargetKey)
-				// klog.Info(lbRuleMap[lbRuleKey].healthCheckManager.runner.GetTargetStatus(healthCheckTargetKey))
+				klog.Info(endpointKey)
+				klog.Info(endpointInstance.status)
+				klog.Info(healthCheckTargetKey)
+				klog.Info(lbRuleMap[lbRuleKey].healthCheckManager.runner.GetTargetStatus(healthCheckTargetKey))
 				if endpointInstance.status != lbRuleMap[lbRuleKey].healthCheckManager.runner.GetTargetStatus(healthCheckTargetKey) {
 					ruleChanged = true
 					endpointInstance.status = lbRuleMap[lbRuleKey].healthCheckManager.runner.GetTargetStatus(healthCheckTargetKey)
@@ -478,26 +475,13 @@ type healthCheckerInstance struct {
 
 func transRule(lbRuleInstance *lbRule) []*v1.Rules {
 	var rules []*v1.Rules
-	var totalWeight int
-	totalWeight = 0
 
 	for _, endpointKey := range lbRuleInstance.endpointKeys {
-		if !endpointMap[endpointKey].status { //if the endpoint is not alive
-			continue
-		}
-		totalWeight = totalWeight + endpointMap[endpointKey].weight
-	}
-
-	for _, endpointKey := range lbRuleInstance.endpointKeys {
-		// klog.Info(endpointMap[endpointKey])
+		klog.Info(endpointMap[endpointKey])
 		if !endpointMap[endpointKey].status {
 			continue
 		}
-		// weight := float64(endpointMap[endpointKey].weight) * 0.01
-		weight := float64(endpointMap[endpointKey].weight) / float64(totalWeight)
-		klog.Infoln("weight:", weight, "endpointWeigh:", endpointMap[endpointKey].weight, "total:", totalWeight)
-		totalWeight = totalWeight - endpointMap[endpointKey].weight
-
+		weight := float64(endpointMap[endpointKey].weight) * 0.01
 		var rule *v1.Rules
 		if lbRuleInstance.lbVirtualPort == 0 || endpointMap[endpointKey].endpointPort == 0 {
 			rule = &v1.Rules{
@@ -515,9 +499,8 @@ func transRule(lbRuleInstance *lbRule) []*v1.Rules {
 		} else {
 			rule = &v1.Rules{
 				Match: v1.Match{
-					DstIP:    lbRuleInstance.lbVirtualIP,
-					DstPort:  lbRuleInstance.lbVirtualPort,
-					Protocol: lbRuleInstance.protocol,
+					DstIP:   lbRuleInstance.lbVirtualIP,
+					DstPort: lbRuleInstance.lbVirtualPort,
 				},
 				Action: v1.Action{
 					DstIP:   endpointMap[endpointKey].endpointIP,
@@ -555,32 +538,23 @@ func validLBRuleFormat(lbRules *[]v1.LBRules) LBRULEVALIDATION {
 	for _, rule := range *lbRules {
 		key := generatelbkey(&rule)
 		if _, exist := m[key]; exist {
-			klog.Info("The key exists")
 			return INVALIDE
 		} else {
 			// insert but do nothing
 			m[key] = true
 		}
 		if rule.LoadBalancerPort > 65535 {
-			klog.Info("Too large vport number:", rule.LoadBalancerPort)
 			return INVALIDE
 		}
 		for _, endpoint := range rule.Backends {
 			if endpoint.BackendPort > 65535 {
-				klog.Info("Too large Backend port number:", endpoint.BackendPort)
 				return INVALIDE
 			}
 			if endpoint.HealthCheckPort > 65535 {
-				klog.Info("Too large Healthcheck port number:", endpoint.HealthCheckPort)
 				return INVALIDE
 			}
 			if (endpoint.BackendPort != 0 && rule.LoadBalancerPort == 0) ||
 				(rule.LoadBalancerPort != 0 && endpoint.BackendPort == 0) {
-				klog.Info("Abnormal port number composition:", endpoint.BackendPort, rule.LoadBalancerPort, rule.LoadBalancerPort, endpoint.BackendPort)
-				return INVALIDE
-			}
-			if rule.LoadBalancerPort != 0 && rule.Protocol == "" {
-				klog.Info("Cannot enforce the LB rule: In case the LB port is specified, protocol information should  be specified (iptables constraint)")
 				return INVALIDE
 			}
 			if endpoint.HealthCheckMethod == string(healthchecker.L4TCPHEALTHCHECK) &&
