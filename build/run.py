@@ -8,6 +8,11 @@ def subprocess_open(command):
 
 def go_build(package, output):
     # out, err = subprocess_open(['go', 'build', '-a', '-o', output, package])
+    print(output)
+    out, err = subprocess_open(['rm', output])
+    # if out != "" or err != "":
+    #     return out, err
+    # return "", ""
     out, err = subprocess_open(['go', 'build', '-o', output, package])
     if out != "" or err != "":
         return out, err
@@ -22,6 +27,7 @@ def docker_build(name, tag, registry):
 
 def docker_push(name, tag, registry):
     image = registry + name + ":" + tag
+    print(image)
     out, err = subprocess_open(['docker', 'push', image])
     if out != "" or err != "":
         return out, err
@@ -30,10 +36,10 @@ def docker_push(name, tag, registry):
 def main():
     PKG_NAME = 'github.com/tmax-cloud/virtualrouter'
     GO_BINARY_NAME = 'virtualrouter'
-    # DOCKER_REGISTRY = '10.0.0.4:5000/'
-    DOCKER_REGISTRY = 'tmaxcloudck/'
+    DOCKER_REGISTRY = 'registry.network-team.tmaxanc.com/cloud/'
+    #DOCKER_REGISTRY = '192.168.1.163:5000/'
     DOCKER_IMAGE_NAME = "virtualrouter"
-    DOCKER_IMAGE_TAG = "v0.1.0"
+    DOCKER_IMAGE_TAG = "v0.2.5-dev"
 
     out, err = go_build(package=PKG_NAME, output=GO_BINARY_NAME)
     if err != "" or out != "":
