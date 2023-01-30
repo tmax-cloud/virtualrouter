@@ -20,6 +20,9 @@ spec:
                   type: array
                   items:
                     type: object
+#                    x-kubernetes-validations:                                          #Bang: can be used from kubernetes v1.25
+#                      - rule: "(self.loadBalancerPort == 0) || (self.protocol != "")"
+#                        message: "The protocol should be specified in case the LB port is specified" 
                     properties:
                       loadBalancerIP:
                         description: VIP for LoadBalancer
@@ -28,6 +31,12 @@ spec:
                         description: VIP for LoadBalancer
                         type: integer
                         maximum: 65535
+                        default: 0
+                      protocol:       # Bang added
+                        description: 
+                        type: string
+                        pattern: ^(|tcp|udp)
+                        default: ""
                       backends:
                         type: array
                         items:
