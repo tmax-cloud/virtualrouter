@@ -1,4 +1,4 @@
-FROM frolvlad/alpine-glibc:alpine-3.13_glibc-2.32
+FROM frolvlad/alpine-glibc:alpine-3.15_glibc-2.34
 
 RUN apk update && apk add iptables && apk add tcpdump && apk add conntrack-tools
 RUN apk add strongswan

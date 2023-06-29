@@ -93,7 +93,7 @@ type Interface interface {
 	// Monitor detects when the given iptables tables have been flushed by an external
 	// tool (e.g. a firewall reload) by creating canary chains and polling to see if
 	// they have been deleted. (Specifically, it polls tables[0] every interval until
-	// the canary has been deleted from there, then waits a short additional time for
+	// the canary has been deleted from there, then waits a short additional time forfdfdfdfdfdfd
 	// the canaries to be deleted from the remaining tables as well. You can optimize
 	// the polling by listing a relatively empty table in tables[0]). When a flush is
 	// detected, this calls the reloadFunc so the caller can reload their own iptables

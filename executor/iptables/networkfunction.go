@@ -8,8 +8,11 @@ import (
 )
 
 func NF_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer, args ...string) {
-	if a.Policy != "" {
+	if chain != "" {
 		buffer.WriteString("-A" + " " + chain)
+	}
+	if a.Policy != "" {
+		// buffer.WriteString("-A" + " " + chain)
 		if args != nil {
 			args2string(args, buffer)
 		}
@@ -19,7 +22,6 @@ func NF_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer, args ..
 	}
 	if a.DstIP != "" {
 		// buffer.WriteString("-A" + " " + chain)
-		buffer.WriteString("-A" + " " + chain)
 		if args != nil {
 			args2string(args, buffer)
 		}
@@ -28,7 +30,6 @@ func NF_ADD(m v1.Match, a v1.Action, chain string, buffer *bytes.Buffer, args ..
 	}
 	if a.SrcIP != "" {
 		// buffer.WriteString("-A" + " " + chain)
-		buffer.WriteString("-A" + " " + chain)
 		if args != nil {
 			args2string(args, buffer)
 		}
@@ -77,13 +78,15 @@ func args2string(args []string, buffer *bytes.Buffer) {
 }
 
 func match2string(m v1.Match, buffer *bytes.Buffer) {
-	if m.DstIP != "" {
-		buffer.WriteString(" -d " + m.DstIP)
-	}
 	if m.SrcIP != "" {
 		buffer.WriteString(" -s " + m.SrcIP)
 	}
-	if m.Protocol != "" {
+	if m.DstIP != "" {
+		buffer.WriteString(" -d " + m.DstIP)
+	}
+	if m.Protocol == "all" {
+		// Do not specify the protocol
+	} else if m.Protocol != "" {
 		buffer.WriteString(" -p " + m.Protocol)
 	}
 	if m.DstPort != 0 {
